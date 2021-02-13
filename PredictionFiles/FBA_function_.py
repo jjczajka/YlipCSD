@@ -82,28 +82,12 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                     temp_dict['gpr']=reaction.gene_reaction_rule
                     rxn_list.append(temp_dict)
                 GPR_dict[x]=rxn_list
-        # print('No geneDict for ',GSM)
-        # for tempGene in model.genes:
-        #     tempGene2 = model.genes.get_by_id(tempGene.id)
-        #     rxn_list=[]
-        #     for reaction in tempGene2.reactions:
-        #         temp_dict={}
-        #         temp_dict['mets']=[x.id for x in reaction.metabolites]
-        #         temp_dict['mets_coefs']=[x for x in reaction.get_coefficients(reaction.metabolites)]
-        #         temp_dict['lower_bound']=reaction.lower_bound
-        #         temp_dict['upper_bound']=reaction.upper_bound
-        #         temp_dict['id']=reaction.id
-        #         temp_dict['name']=reaction.name
-        #         temp_dict['subsystem']=reaction.subsystem
-        #         temp_dict['gpr']=reaction.gene_reaction_rule
-        #         rxn_list.append(temp_dict)
-        #         GPR_dict[tempGene.id]=rxn_list
+
         return(GPR_dict)
 
         #Simulate default Genome-scale-model flux with biomass as objective function
     def defaultObjFunction(dGSM):
         defaultObj = 'biomass_C'
-    ##load in GSM, may need further optimiztion
 
         model = cobra.io.load_matlab_model(dGSM+'_corr.mat')
         model.objective = model.reactions.get_by_id(defaultObj)
@@ -279,12 +263,14 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             if(OE=='1'):
                 GPR_dict_list = searchGeneDict(genesMO[i],GSM,GPR_dict,gene_list)# print(i,genesMO,OE)
 
-
+            #for the associated reactions obtain the original reaction bounds
             if (GPR_dict_list!=None):
                 for rxn in GPR_dict_list:
                     lower = tempOEModel.reactions.get_by_id(rxn['id']).lower_bound
                     upper = tempOEModel.reactions.get_by_id(rxn['id']).upper_bound
+                    #obtain the previous solution reaction flux value
                     rxnKOFlux = tempKOSol.fluxes[rxn['id']]
+                    #if the flux is positive, implement OE to lower bound (i.e., set lower bound higher than default flux value)
                     if rxnKOFlux>0:
                         brk=0
                         tempOEModel.reactions.get_by_id(rxn['id']).lower_bound = (rxnKOFlux+((rxnKOFlux)*ep0))
@@ -299,11 +285,9 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                                 tempOEModel.reactions.get_by_id(rxn['id']).lower_bound = rxnKOFlux
                                 f5a+=1
                                 brk=2
-                                #OE by even a tiny margin fails, set it slighly lower than rxnKOFlux boundary to allow network wiggle room.
-                                # tempOEModel.reactions.get_by_id(rxn['id']).lower_bound = (rxnKOFlux-((rxnKOFlux)*ep0))
                                 break
 
-
+                    #if the flux is negative, implement OE to upper bound (i.e., set upper bound lower than default flux value)
                     elif rxnKOFlux<0:
                         brk=0
                         tempOEModel.reactions.get_by_id(rxn['id']).upper_bound = (rxnKOFlux+((rxnKOFlux)*ep0))
@@ -318,65 +302,65 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                                 tempOEModel.reactions.get_by_id(rxn['id']).upper_bound = rxnKOFlux
                                 break
                     
-                    else:
-                        brk=0
-                        if (tempOEModel.reactions.get_by_id(rxn['id']).lower_bound==0 and tempOEModel.reactions.get_by_id(rxn['id']).upper_bound==0):
-                            tempOEModel.reactions.get_by_id(rxn['id']).bounds = (-ep1,ep1)
-                            if (tempOEModel.optimize().status!='optimal'):
-                                f1a+=1
-                                tempOEModel.reactions.get_by_id(rxn['id']).bounds = (0,0)
+#                     else:
+#                         brk=0
+#                         if (tempOEModel.reactions.get_by_id(rxn['id']).lower_bound==0 and tempOEModel.reactions.get_by_id(rxn['id']).upper_bound==0):
+#                             tempOEModel.reactions.get_by_id(rxn['id']).bounds = (-ep1,ep1)
+#                             if (tempOEModel.optimize().status!='optimal'):
+#                                 f1a+=1
+#                                 tempOEModel.reactions.get_by_id(rxn['id']).bounds = (0,0)
 
-                        elif (tempOEModel.reactions.get_by_id(rxn['id']).lower_bound==0):
+#                         elif (tempOEModel.reactions.get_by_id(rxn['id']).lower_bound==0):
 
-                            tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=ep2
+#                             tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=ep2
 
-                            tempeps2 = ep2
-                            while ((tempOEModel.optimize().status!='optimal') and (brk<1)):
-                                tempeps2 = tempeps2/10
-                                tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=tempeps2
+#                             tempeps2 = ep2
+#                             while ((tempOEModel.optimize().status!='optimal') and (brk<1)):
+#                                 tempeps2 = tempeps2/10
+#                                 tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=tempeps2
 
 
-                                if tempeps2<1e-5:
-                                    tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=0
-                                    brk = 2
-                                    f2a+=1
-                                    break
-                        elif (tempOEModel.reactions.get_by_id(rxn['id']).upper_bound==0):
+#                                 if tempeps2<1e-5:
+#                                     tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=0
+#                                     brk = 2
+#                                     f2a+=1
+#                                     break
+#                         elif (tempOEModel.reactions.get_by_id(rxn['id']).upper_bound==0):
 
-                            tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=-ep2
-                            tempeps2 = ep2
-                            while (tempOEModel.optimize().status!='optimal') and (brk<1):
-                                tempeps2 = tempeps2/10
-                                tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=-tempeps2
-                                if tempeps2<1e-5:
-                                    tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=0
-                                    brk=2
-                                    f3a+=1
-                                    break
+#                             tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=-ep2
+#                             tempeps2 = ep2
+#                             while (tempOEModel.optimize().status!='optimal') and (brk<1):
+#                                 tempeps2 = tempeps2/10
+#                                 tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=-tempeps2
+#                                 if tempeps2<1e-5:
+#                                     tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=0
+#                                     brk=2
+#                                     f3a+=1
+#                                     break
 
-                        else:
-                            lower = tempOEModel.reactions.get_by_id(rxn['id']).lower_bound
-                            upper = tempOEModel.reactions.get_by_id(rxn['id']).upper_bound
-                            tempeps5 = ep5
-                            tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=tempeps5
+#                         else:
+#                             lower = tempOEModel.reactions.get_by_id(rxn['id']).lower_bound
+#                             upper = tempOEModel.reactions.get_by_id(rxn['id']).upper_bound
+#                             tempeps5 = ep5
+#                             tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=tempeps5
 
-                            brk2=0
-                            brk=0
-                            while (tempOEModel.optimize().status!='optimal') and brk<1:
-                                tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=tempeps5
-                                tempeps5 = tempeps5/10
-                                if (tempeps5 < 1e-5) and (tempOEModel.optimize().status!='optimal'): #was-8
-                                    tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=lower
-                                    tempeps5 = ep5
-                                    brk = 1
-                                    while (tempOEModel.optimize().status!='optimal') and brk2<1:
-                                        tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=-tempeps5
-                                        tempeps5 = tempeps5/10
-                                        if (tempeps5 < 1e-5) and (tempOEModel.optimize().status!='optimal'):#was -8
-                                            tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=upper
-                                            brk2 = 1
-                                            f6a+=1
-                                            break
+#                             brk2=0
+#                             brk=0
+#                             while (tempOEModel.optimize().status!='optimal') and brk<1:
+#                                 tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=tempeps5
+#                                 tempeps5 = tempeps5/10
+#                                 if (tempeps5 < 1e-5) and (tempOEModel.optimize().status!='optimal'): #was-8
+#                                     tempOEModel.reactions.get_by_id(rxn['id']).lower_bound=lower
+#                                     tempeps5 = ep5
+#                                     brk = 1
+#                                     while (tempOEModel.optimize().status!='optimal') and brk2<1:
+#                                         tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=-tempeps5
+#                                         tempeps5 = tempeps5/10
+#                                         if (tempeps5 < 1e-5) and (tempOEModel.optimize().status!='optimal'):#was -8
+#                                             tempOEModel.reactions.get_by_id(rxn['id']).upper_bound=upper
+#                                             brk2 = 1
+#                                             f6a+=1
+#                                             break
 
 
             else:

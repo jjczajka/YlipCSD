@@ -39,7 +39,7 @@ def encodeTransform(workingData):
         elif x==3:
             return 2 #2 now intermidiate
 
-    #corrects the database encoding to categorically encode from lowest nitrogen level (1) to highest (3)                
+    #changes the database encoding to categorically encode from lowest nitrogen level (1) to highest (3)                
     def nitrogenEncodingFix(x):
         if x==1:
             return 3 #nitrogen sufficent
@@ -120,6 +120,8 @@ def encodeTransform(workingData):
         stoichprecursor={}
         temp1={}
         temp2={}
+        
+        #The thermo option for lipids utilized the fatty acid compononents due to availability of Gibbs free eneregy 
 
         if workingData.loc[dataPoint]['product_name2']=='Lipids':
             stoichATP = stoichATP/3
@@ -130,7 +132,6 @@ def encodeTransform(workingData):
             temp1[0] = -3341.2 #deltaGo
             prec = ['Acetyl-CoA']
 
-        #Tag option
         else:
             prec = workingData.loc[dataPoint].central_carbon_precursor.strip().split(';')
 
