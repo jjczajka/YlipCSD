@@ -66,7 +66,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
     def generateOEGeneGPR(GSM,model):
         GPR_dict=defaultdict(list)
         for x in geneDict.keys():
-            # print(geneDict[x]['bname'])
             if geneDict[x][GSM]==1:
                 tempGene = model.genes.get_by_id(geneDict[x]['bname'])
                 rxn_list=[]
@@ -425,7 +424,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         stoichNADPH
         prec = FBATrainData.loc[dataPoint].central_carbon_precursor.strip().split(';')
 
-        #create product reaction\
+        #create product reaction
         reaction__product = []
         reaction__product = Reaction('Prdt_r')
         reaction__product.name = 'Prdt_r'
@@ -466,6 +465,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             reaction__product.add_metabolites({modelP.metabolites.get_by_id(met).id: -round(float(stoichprecursor[i]))})
             if j=='Acetyl-CoA':
                 reaction__product.add_metabolites({model.metabolites.get_by_id(fbaModelMetaboliteDict['CoenzymeA'][gsm].strip('\'"')).id: round(float(stoichprecursor[i]))})
+
         #adds to model
         demand = modelP.add_boundary(modelP.metabolites.prdt_m,type="demand")
 
@@ -488,7 +488,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                 counterProductFailTemp+=1
                 prod_f+=1
                 finalProductFluxSolnTemp = modelP.optimize()
-                #print(counterProductFailTemp)
                 break
         finalProductFluxSolnTemp = modelP.optimize()
 
@@ -518,7 +517,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                 ATP2 = ATP2 - featureModelSoln.fluxes['FACOAL140']#correct?
             Precursors2 = {}
             PrdtFlux2 = featureModelSoln.fluxes['Prdt_r']
-            # print(PrdtFlux2)
             O2 = featureModelSoln.fluxes['EX_o2(e)']
             Glc = featureModelSoln.fluxes['EX_glc(e)']
 
@@ -675,19 +673,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint],PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
             PrdtYield[dataPoint] = PrdtFlux[dataPoint]*MW
 
-            #
-            # workingData2['EMP_'+GSM]=pd.Series(EMP)
-            # workingData2['PPP_'+GSM]=pd.Series(PPP)
-            # workingData2['TCA_'+GSM]=pd.Series(TCA)
-            # workingData2['NADPH_'+GSM]=pd.Series(NADPH)
-            # workingData2['ATP_'+GSM]=pd.Series(ATP)
-            # workingData2['NADH_'+GSM]=pd.Series(NADH)
-            # workingData2['PrdtFlux_'+GSM]=pd.Series(PrdtFlux)
-            # workingData2['PrdtYield_'+GSM]=pd.Series(PrdtYield)
-            # workingData2['Biomass_'+GSM]=pd.Series(bio)
-            # workingData2['O2Uptake_'+GSM]=pd.Series(O2uptake)
-            # workingData2['GlcUptake_'+GSM]=pd.Series(Glcuptake)
-
+            
+            #Are there knock-outs to screen?
             tempOptKnock=[]
             optKnockModel = forPrdtModel.copy()
             additionalKnocks=0
@@ -699,16 +686,14 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                         # forPrdtModel2 = forPrdtModel.copy()
                         tempOptKnock=[]
                         tempKO2=[]
+                        
+                        #for each reaction, grab the associated gene to knock-out.
                         for junk in optKO:
                             try:
-                                # junk
                                 t = (optKnockModel.reactions.get_by_id(junk).gene_reaction_rule)
                                 t2 = t.replace("(", "").replace(")", "").replace(" ", "").split('or')
                                 t2=[ot.split('and', 1)[0] for ot in t2]
                                 tempOptKnock = tempOptKnock + t2
-                                # t2
-                                # tempOptKnock
-
                                 tempKO2 = [1 for i in range(len(tempOptKnock))]
                                 additionalKnocks = len(tempOptKnock)
                             except Exception as e:

@@ -53,9 +53,9 @@ def encodeTransform(workingData):
         return str(x)
 
 
-
+    #obtain dictionaries on how to encode the data; not all dictionaries are utilized for model features.
     encoding_Data = pd.ExcelFile('Supplemental Excel File 2- DataCharateristics & Encoding.xlsx').parse('Encoding')
-
+    
     strainDict = dict(zip(encoding_Data.strain_background,encoding_Data.strain_class))
     mediaDict = dict(zip(encoding_Data.media,encoding_Data.media_class))
     productDict = dict(zip(encoding_Data.Product, encoding_Data.prdt_class))
@@ -64,7 +64,6 @@ def encodeTransform(workingData):
     N2sourceDict = dict(zip(encoding_Data.N2Source,encoding_Data.N2source_class))
     promoterDict = dict(zip(encoding_Data.Promoters,encoding_Data.prom_class))
     integrationSiteDict = dict(zip(encoding_Data.integrationSite,encoding_Data.int_class))
-
 
     ####################################################################################################
     ####################################################################################################
@@ -107,8 +106,6 @@ def encodeTransform(workingData):
     workingData['precursorsRequiredEncoded'] = temp2.sum(axis=1)
 
     ########################################   thermoOptions   #########################################
-
-
     totalTherm={}
     averageTherm={}
 
@@ -122,7 +119,6 @@ def encodeTransform(workingData):
         temp2={}
         
         #The thermo option for lipids utilized the fatty acid compononents due to availability of Gibbs free eneregy 
-
         if workingData.loc[dataPoint]['product_name2']=='Lipids':
             stoichATP = stoichATP/3
             stoichNADPH = stoichNADPH/3
@@ -132,6 +128,7 @@ def encodeTransform(workingData):
             temp1[0] = -3341.2 #deltaGo
             prec = ['Acetyl-CoA']
 
+        # non-lipid products
         else:
             prec = workingData.loc[dataPoint].central_carbon_precursor.strip().split(';')
 
@@ -193,7 +190,6 @@ def encodeTransform(workingData):
 
     temp1 = pd.Series(temp1)
     workingData['N2_contentEncoded']=temp1
-
 
 
     ####################################################################################################
