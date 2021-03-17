@@ -1,7 +1,10 @@
 # YlipCSD
 
 
-Y. lipolytica computational strain design algorithm.
+This is a computational strain design algorithm train and validated on the oleaginous yeast *Yarrowia lipolytica*. <br>
+
+
+
 
 Environmental .yml files have been provided to replicate the environments used for training and predictions.
 A .yml file is provided for Linux (condaPY36lin_.yml), Mac (condaPY36mac.yml), and Windows (condaPY36win.yml) operating systems.
