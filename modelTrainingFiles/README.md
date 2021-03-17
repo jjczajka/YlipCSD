@@ -19,6 +19,5 @@ ML training and validation scripts
 Other files needed for training are listed below and provided as supplemental information with the accompanying manuscript.
 * **Supplemental Excel File 1- Database** - Database containing the original data used to train the model. 
 * **Supplemental Excel File 2- DataCharacteristics&Encoding.xlsx** - file containing encoding dictionaries needed in the *ML_pipeline_part2.ipynb & ML_pipeline_part3.ipynb* script.
-* **iYLI647_corr.mat** - Genome scale model (.mat) for generating *Y. lipolytica* features in *ML_pipeline_part2.ipynb*. Originally published [10.1186/s12918-018-0542-5](10.1186/s12918-018-0542-5) and then curated [here, 10.1007/s12257-019-0208-1](10.1007/s12257-019-0208-1). The curated model is provided here. 
-
+* **iYLI647_corr.mat** - Genome scale model (.mat) for generating *Y. lipolytica* features in *ML_pipeline_part2.ipynb*. Originally published [10.1186/s12918-018-0542-5](10.1186/s12918-018-0542-5) and then curated [DOI:10.1007/s12257-019-0208-1](https://link.springer.com/article/10.1007%2Fs12257-019-0208-1). The curated model is provided here. 
 A step-by-step guide for utilizing the algorithm is provided with the following manuscript.
