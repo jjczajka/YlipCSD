@@ -21,7 +21,7 @@ To install and activate the environment from the yaml file, navigate to the dire
 >conda activate condaPY36xxx
 
 To install Jupyter notebooks use the following lines after activating the conda environment:
->pip3 install --upgrade pip
+>pip3 install --upgrade pip  
 >pip3 install jupyter
 
 To export the environment to a Jupyter Kernel, use the following commands:
