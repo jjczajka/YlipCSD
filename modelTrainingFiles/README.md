@@ -21,4 +21,4 @@ Other files needed for training are listed below and provided as supplemental in
 * **Supplemental Excel File 2- DataCharacteristics&Encoding.xlsx** - file containing encoding dictionaries needed in the *ML_pipeline_part2.ipynb & ML_pipeline_part3.ipynb* script.
 * **iYLI647_corr.mat** - Genome scale model (.mat) for generating *Y. lipolytica* features in *ML_pipeline_part2.ipynb*. Originally published [10.1186/s12918-018-0542-5](https://bmcsystbiol.biomedcentral.com/articles/10.1186/s12918-018-0542-5) and then curated [DOI:10.1007/s12257-019-0208-1](https://link.springer.com/article/10.1007%2Fs12257-019-0208-1). The curated model is provided here.   
 
-A step-by-step guide for utilizing the algorithm is provided with the following manuscript.
+A step-by-step guide for utilizing the algorithm is provided with in the manuscript supplemental files.
