@@ -11,10 +11,10 @@ The data handling and model training/validation was performed using the followin
 3. **ML_pipeline_part3.ipynb** - script for encoding the features for input into the ML pipeline.
 
 
-ML training and validation scripts
-4. **ML_pipeline_part4.ipynb** - script for creating train/validate datasets and ML pipeline and model training.
-5. **FeatureImportanceScores.ipynb** - script for assessing the importance of individual features on model predictions.
-6. **ModelEvaluation.ipynb** - script for evaluating model performance on validate or test data.
+ML training and validation scripts   
+4. **ML_pipeline_part4.ipynb** - script for creating train/validate datasets and ML pipeline and model training.  
+5. **FeatureImportanceScores.ipynb** - script for assessing the importance of individual features on model predictions.  
+6. **ModelEvaluation.ipynb** - script for evaluating model performance on validate or test data. 
 
 Other files needed for training are listed below and provided as supplemental information with the accompanying manuscript.
 * **Supplemental Excel File 1- Database** - Database containing the original data used to train the model. 
