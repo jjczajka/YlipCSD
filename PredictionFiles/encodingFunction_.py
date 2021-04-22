@@ -168,28 +168,28 @@ def encodeTransform(workingData):
     ####################################################################################################
     temp1 = pd.DataFrame()
 
-    temp1 = workingData.N2Source.apply(funcReturnStr).str.split(';',expand=True).fillna('NaN') #FA
+#     temp1 = workingData.N2Source.apply(funcReturnStr).str.split(';',expand=True).fillna('NaN') #FA
 
-    for col in temp1.columns:
-        temp1[col]=temp1[col].map(N2sourceDict)
+#     for col in temp1.columns:
+#         temp1[col]=temp1[col].map(N2sourceDict)
 
-    workingData['N2SourceEncoded(max)'] = temp1.max(axis=1).fillna(1)
+#     workingData['N2SourceEncoded(max)'] = temp1.max(axis=1).fillna(1)
 
 
 
     temp1={}
-    for dataPoint in workingData.index:
-        if workingData.loc[dataPoint]['N2SourceEncoded(max)']==1 and workingData.loc[dataPoint]['N2_content']>1:
-            temp1[dataPoint]=4 # high N2, organic
-        elif workingData.loc[dataPoint]['N2SourceEncoded(max)']==1 and workingData.loc[dataPoint]['N2_content']<2:
-            temp1[dataPoint]=2 #low N2, organic
-        elif workingData.loc[dataPoint]['N2SourceEncoded(max)']==0 and workingData.loc[dataPoint]['N2_content']<2:
-            temp1[dataPoint]=1 #low N2, inorganic
-        elif workingData.loc[dataPoint]['N2SourceEncoded(max)']==0 and workingData.loc[dataPoint]['N2_content']>1:
-            temp1[dataPoint]=3 #high N2, inorganic
+#     for dataPoint in workingData.index:
+#         if workingData.loc[dataPoint]['N2SourceEncoded(max)']==1 and workingData.loc[dataPoint]['N2_content']>1:
+#             temp1[dataPoint]=4 # high N2, organic
+#         elif workingData.loc[dataPoint]['N2SourceEncoded(max)']==1 and workingData.loc[dataPoint]['N2_content']<2:
+#             temp1[dataPoint]=2 #low N2, organic
+#         elif workingData.loc[dataPoint]['N2SourceEncoded(max)']==0 and workingData.loc[dataPoint]['N2_content']<2:
+#             temp1[dataPoint]=1 #low N2, inorganic
+#         elif workingData.loc[dataPoint]['N2SourceEncoded(max)']==0 and workingData.loc[dataPoint]['N2_content']>1:
+#             temp1[dataPoint]=3 #high N2, inorganic
 
-    temp1 = pd.Series(temp1)
-    workingData['N2_contentEncoded']=temp1
+#     temp1 = pd.Series(temp1)
+#     workingData['N2_contentEncoded']=temp1
 
 
     ####################################################################################################
@@ -198,12 +198,12 @@ def encodeTransform(workingData):
     temp1 = pd.DataFrame()
     temp2 = pd.DataFrame()
 
-    temp1 = workingData.integration_site_Filled.apply(funcReturnStr).str.split(';',expand=True).fillna('NaN')
+#     temp1 = workingData.integration_site_Filled.apply(funcReturnStr).str.split(';',expand=True).fillna('NaN')
 
-    for col in temp1:
-        temp1[col]=temp1[col].map(integrationSiteDict)
+#     for col in temp1:
+#         temp1[col]=temp1[col].map(integrationSiteDict)
 
-    workingData['integrationSiteEncoded(Sum)'] = temp1.sum(axis=1).fillna(0)
+#     workingData['integrationSiteEncoded(Sum)'] = temp1.sum(axis=1).fillna(0)
 
     ####################################################################################################
     ####################################################################################################
@@ -214,7 +214,7 @@ def encodeTransform(workingData):
     workingData.pH = workingData.pH.fillna(0)
 
     workingData['csConcTotal'] = workingData['cs_conc1']+ workingData['cs_conc2']
-    workingData['dir_evo'].fillna(0,inplace=True)
+#     workingData['dir_evo'].fillna(0,inplace=True)
 
 
     workingData['PrdtFlux_iYLI647'].fillna(workingData['PrdtFlux_iYLI647'].min(),inplace=True)
