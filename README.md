@@ -25,4 +25,4 @@ To install Jupyter notebooks use the following lines after activating the conda 
 >pip3 install jupyter
 
 To export the environment to a Jupyter Kernel, use the following commands:
->python-m ipykernel install --user --name "KERNEL NAME: <condaPY36...>"
+>python -m ipykernel install --user --name "KERNEL NAME: <condaPY36...>"
