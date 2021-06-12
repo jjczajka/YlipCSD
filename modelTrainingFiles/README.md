@@ -8,12 +8,12 @@ See the ***README*** file on the [main page](https://github.com/jjczajka/YlipCSD
 
 The data processing code and training code was modulaized with four scripts (ML_pipeline_parts 1-4). The data handling and model training/validation was performed using the following scripts, with the first three being used for pre-processing of data.
 1. **ML_pipeline_part1.ipynb** - script for importing the database, creating genetic features, and splitting the data into train/test sets.
-2. **ML_pipeline_part2.ipynb** - script for creating FBA features based on genome scale models that replicate the provided genetic background detailed in the strain instance.  
-3. **ML_pipeline_part3.ipynb** - script for encoding the features for input into the ML pipeline.
+2. **ML_pipeline_part2_trainData.ipynb** - script for creating FBA features based on genome scale models that replicate the provided genetic background detailed in the strain instance.  
+3. **ML_pipeline_part3_trainData.ipynb** - script for encoding the features for input into the ML pipeline.
 
 The Test data was processed seperately from the train and validation data. **ML_pipeline_part2_TESTDataProcessing** and **ML_pipeline_part3_TESTDataProcessing** can be ran with no further modifications to process the test data. 
 
-Note: The FBA feature generation in a memory intensive process (**ML_pipeline_part2**). It may be recommended that the data be processed in batches. Comments have been added to the code section to indicate where the users can adjust the amount of data processed at once. 
+Note: The FBA feature generation is a memory intensive process (**ML_pipeline_part2**). It may be recommended that the data be processed in batches. Comments have been added to the code section to indicate where the users can adjust the amount of data processed at once. 
 
 ML training and validation scripts   
 4. **ML_pipeline_part4.ipynb** - script for creating train/validate datasets and ML pipeline and model training.  
