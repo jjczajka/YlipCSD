@@ -11,7 +11,7 @@ The CSD alorithm takes environmental and genetic conditions and a target biochem
 * **environmentalYAMLFiles** directory contains .yml files to replicate the python environments.
   * Linux (condaPY36lin_.yml)
   * Mac (condaPY36mac.yml)
-  * Windows (condaPY36win.yml) operating systems.
+  * Windows (condaPY36windows.yml) operating systems.
 
 The Conda (Miniconda or Anaconda) python package manager was utilized for initiating the python environment. Information on downloading and installing the Conda package manager can be [found here.](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 
