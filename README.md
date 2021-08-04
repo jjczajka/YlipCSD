@@ -26,3 +26,7 @@ To install Jupyter notebooks use the following lines after activating the conda 
 
 To export the environment to a Jupyter Kernel, use the following commands:
 >python -m ipykernel install --user --name "KERNEL NAME: <condaPY36...>"
+
+
+
+## Support is currently being added for predicting Overexpression targets (3 Aug 2021). Updates should should be implemented within two weeks
