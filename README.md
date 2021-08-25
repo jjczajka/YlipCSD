@@ -29,4 +29,4 @@ To export the environment to a Jupyter Kernel, use the following commands:
 
 
 
-## Support is currently being added for predicting Overexpression targets (3 Aug 2021). Updates should should be implemented within two weeks
+## Support is currently being added for predicting Overexpression targets (26 Aug 2021). Updates are almost complete and undergoing final verfications.
