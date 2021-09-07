@@ -29,4 +29,4 @@ To export the environment to a Jupyter Kernel, use the following commands:
 
 
 
-## Support is currently being added for predicting Overexpression targets (26 Aug 2021). Updates are almost complete and undergoing final verfications.
+UPDATE: Currently the algorithm is only set up to analyze either Overexpression or Knockouts for strain design predictions. In Supplemental Excel File 6- CSD Template.xlsx there is a sheet where you can specify either KO or OE to enable the option.
