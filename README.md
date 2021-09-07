@@ -11,7 +11,7 @@ The CSD alorithm takes environmental and genetic conditions and a target biochem
 * **environmentalYAMLFiles** directory contains .yml files to replicate the python environments.
   * Linux (condaPY36lin_.yml)
   * Mac (condaPY36mac.yml)
-  * Windows (condaPY36win.yml) operating systems.
+  * Windows (condaPY36windows.yml) operating systems.
 
 The Conda (Miniconda or Anaconda) python package manager was utilized for initiating the python environment. Information on downloading and installing the Conda package manager can be [found here.](https://docs.conda.io/projects/conda/en/latest/user-guide/install/)
 
@@ -26,3 +26,7 @@ To install Jupyter notebooks use the following lines after activating the conda 
 
 To export the environment to a Jupyter Kernel, use the following commands:
 >python -m ipykernel install --user --name "KERNEL NAME: <condaPY36...>"
+
+
+
+## Support is currently being added for predicting Overexpression targets (26 Aug 2021). Updates are almost complete and undergoing final verfications.
