@@ -12,7 +12,8 @@ The user needs to only access/run two files to generate predictions.
 
 Other files in the directory are needed for the algorithm to function and are described here.
 * **M21iYL.pickle** - pickle file containing the machine learning trained model described in the accompanying manuscript.
-* **FBA_function_.py** - function that generates the FBA features from GSM *iYLI647_corr* for input into the prediction algorithm.
+* **FBA_function_.py** - KNOCK OUT function that generates the FBA features from GSM *iYLI647_corr* for input into the prediction algorithm.
+* **FBA_functionOE_.py** - OVER Expression function that generates the FBA features from GSM *iYLI647_corr* for input into the prediction algorith1m.
 * **encodingFunction_.py** - function that encodes the features (environmental, genetic, FBA) for input into the prediction algorithm.
 * **iYLI647_corr.mat** - Genome scale model (.mat) for generating *Y. lipolytica* features. Originally published [DOI 10.1186/s12918-018-0542-5](https://bmcsystbiol.biomedcentral.com/articles/10.1186/s12918-018-0542-5) and then curated [DOI:10.1007/s12257-019-0208-1](https://link.springer.com/article/10.1007%2Fs12257-019-0208-1). The curated model is provided here. 
 * **Supplemental Excel File 2- DataCharacteristics&Encoding.xlsx** - file containing encoding dictionaries needed in the *encodingFunction.py* script.
