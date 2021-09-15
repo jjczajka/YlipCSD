@@ -22,3 +22,9 @@ Other files in the directory are needed for the algorithm to function and are de
 A step-by-step guide for utilizing the algorithm is provided with the following manuscript.
 
 UPDATE: Currently the algorithm is only set up to analyze either Overexpression or Knockouts for strain design predictions. In **Supplemental Excel File 6- CSD Template.xlsx** there is a sheet where you can specify either KO or OE to enable the option.
+
+
+
+If you would like to simulate for non-glucose carbon sources, use the **updatedPredictionFiles** Directory. The new directory has a modified version of the model, where the FBA simulation uses the individual carbon sources normalized to 10 mmol/h/gDCW of glucose. For example, if you wanted to screen on glycerol, the FBA model would use ~20 mmol/h/gDCW as an uptake rate for glycerol.
+
+The model that has been added was described in the manuscript and had similar performance metrics.
