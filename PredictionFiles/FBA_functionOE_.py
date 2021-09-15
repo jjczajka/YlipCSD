@@ -693,9 +693,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                 # tempGenesModified
                 tempGenesOE = FBATrainData.loc[dataPoint].gene_overexpression.strip().split(';')
                 tempHetGenes = FBATrainData.loc[dataPoint].heterologous_gene.strip().split(';')
-                if dataPoint==343:
-                    tempGenesModified=tempGenesModified[0:3]
-                    tempGenesOE=tempGenesOE[0:3]
 
 
                 modelOE,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(modelKO,GSM,tempGenesOE,tempGenesModified,tempHetGenes,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
@@ -791,8 +788,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                 if tempOESol.status!='optimal':
                     print('gtempOptKnockSol growth failed')
                     sim_grw_flag=0
-                    defaultPrdtModelBioObj = forPrdtModel.objective_value
-                    optKnockModel = forPrdtModel.copy()
+                    defaultPrdtModelBioObj = tempOptOESol.objective_value
+                    #optKnockModel = forPrdtModel.copy()
                 else:
                     defaultPrdtModelBioObj = tempOptOESol.objective_value
                     # forPrdtModel = modelKO.copy()

@@ -90,7 +90,13 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
 
         model = cobra.io.load_matlab_model(dGSM+'_corr.mat')
         model.objective = model.reactions.get_by_id(defaultObj)
+        
         defaultFlux = model.optimize()
+        
+        
+        
+        
+        
         return(model, defaultFlux.objective_value,defaultFlux)
 
         #Perform Genetic Knockout for model simulation
@@ -649,9 +655,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                 # tempGenesModified
                 tempGenesOE = FBATrainData.loc[dataPoint].gene_overexpression.strip().split(';')
                 tempHetGenes = FBATrainData.loc[dataPoint].heterologous_gene.strip().split(';')
-                if dataPoint==343:
-                    tempGenesModified=tempGenesModified[0:3]
-                    tempGenesOE=tempGenesOE[0:3]
 
 
                 modelOE,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(modelKO,GSM,tempGenesOE,tempGenesModified,tempHetGenes,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
@@ -725,8 +728,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                     if tempOptKnockSol.status!='optimal':
                         print('gtempOptKnockSol growth failed')
                         sim_grw_flag=0
-                        defaultPrdtModelBioObj = forPrdtModel.objective_value
-                        optKnockModel2 = forPrdtModel.copy()
+                        defaultPrdtModelBioObj = tempOptKnockSol.objective_value
+                        # optKnockModel2 = forPrdtModel.copy()
                     else:
                         defaultPrdtModelBioObj = tempOptKnockSol.objective_value
                         # forPrdtModel = modelKO.copy()
