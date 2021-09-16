@@ -72,7 +72,7 @@ def perform_MLPrediction(encodedData,output):
         data[column] = data[column].astype(np.float32)
 
     #open the ML model for prediction
-    with open('M21iYL.pickle','rb') as f:
+    with open('M21iYL_cs_GlcNormalized_noO2noEMPnoBio.pickle','rb') as f:
         masterGrid = pickle.load(f)
 
     masterGrid = masterGrid[0]
@@ -94,4 +94,5 @@ def perform_MLPrediction(encodedData,output):
     MLOutput['FBA predicted Yield'] = data['PrdtYield_iYLI647']
     # MLOutput.at['rxns'] = optKnockRxns
     MLOutput.index = data.index
+    MLOutput.round({'% of Original Strain Production':2})
     return(MLOutput)  
