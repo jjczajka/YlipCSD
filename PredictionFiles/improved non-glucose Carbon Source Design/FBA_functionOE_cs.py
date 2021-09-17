@@ -657,8 +657,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
         OE_fail=0
         defaultModel, defaultObj, defaultFluxSol = defaultObjFunction(GSM)
     #####################
-        EMP,PPP,TCA,NADPH,ATP,PrdtFlux,PrdtYield,bio,O2uptake,Glcuptake = {},{},{},{},{},{},{},{},{},{}
-        EMP2,PPP2,TCA2,NADPH2,ATP2,PrdtFlux2,PrdtYield2,bio2,O2uptake2,Glcuptake2 = {},{},{},{},{},{},{},{},{},{}
+        EMP,PPP,TCA,NADPH,ATP,PrdtFlux,PrdtYield,bio,O2uptake,Glcuptake,Mod = {},{},{},{},{},{},{},{},{},{},{}
+        EMP2,PPP2,TCA2,NADPH2,ATP2,PrdtFlux2,PrdtYield2,bio2,O2uptake2,Glcuptake2,Mod2 = {},{},{},{},{},{},{},{},{},{},{}
         print(defaultObj,GSM)
 
 
@@ -788,20 +788,9 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
             else:
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint],PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
             PrdtYield[dataPoint] = PrdtFlux[dataPoint]*FBATrainData.loc[dataPoint].mw/1000
-
+            Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
             #
-            # workingData2['EMP_'+GSM]=pd.Series(EMP)
-            # workingData2['PPP_'+GSM]=pd.Series(PPP)
-            # workingData2['TCA_'+GSM]=pd.Series(TCA)
-            # workingData2['NADPH_'+GSM]=pd.Series(NADPH)
-            # workingData2['ATP_'+GSM]=pd.Series(ATP)
-            # workingData2['NADH_'+GSM]=pd.Series(NADH)
-            # workingData2['PrdtFlux_'+GSM]=pd.Series(PrdtFlux)
-            # workingData2['PrdtYield_'+GSM]=pd.Series(PrdtYield)
-            # workingData2['Biomass_'+GSM]=pd.Series(bio)
-            # workingData2['O2Uptake_'+GSM]=pd.Series(O2uptake)
-            # workingData2['GlcUptake_'+GSM]=pd.Series(Glcuptake)
-            tempOptOE=[]
+
             optOEModel = forPrdtModel.copy()
             additionalOE=0
             for optOEDataPoint in range(0,len(optOERxns)):
@@ -838,10 +827,12 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                         additionalOE = len(tempOptOE)
                         # print(tempOptOE)
                         # print(additionalKnocks)
+                
+
                 optOEModel2 = optOEModel.copy()
                 #optOEModel2 = performGeneKOs(optOEModel2,GSM,tempOE2,tempOptOE)
                 tempOptOESol = optOEModel.optimize()
-                #print(optOEModel2.reactions.GND.bounds,optOEModel2.reactions.GAPD.bounds,optOEModel2.reactions.CSm.bounds)
+
                 optOEModel2,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(optOEModel2,GSM,tempOE2,tempOptOE,tempHetGenes2,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
                 tempOESol = optOEModel2.optimize()
                 #print(optOEModel2.reactions.GND.bounds,optOEModel2.reactions.GAPD.bounds,optOEModel2.reactions.CSm.bounds)
@@ -860,11 +851,14 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                     finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(optOEModel2,defaultPrdtModelBioObj,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv)
 # finalProdFluxSoln
                     EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint],Glcuptake2[optOEDataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
-                    #print(EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint],Glcuptake2[optOEDataPoint])
-                    #print(EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint])
+                    
                 else:
                     EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint],Glcuptake2[optOEDataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
+                
                 PrdtYield2[optOEDataPoint] = PrdtFlux2[optOEDataPoint]*FBATrainData.loc[dataPoint].mw/1000
+                Mod2[optOEDataPoint]=' '.join(optOE)
+                
+                
 # PrdtFlux2
                 if (optOEDataPoint%3)==0:
                     print('Completed ', optOEDataPoint+1, ' overexpression simulations')
@@ -877,6 +871,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
             # print(FBATrainData.loc[dataPoint].number_genes_mod)
             # pd.Series(EMP2)
 
+            workingData2['geneMod'] = pd.concat([pd.Series(Mod),pd.Series(Mod2)],axis=0,ignore_index=True)
             workingData2['EMP_'+GSM]=pd.concat([pd.Series(EMP),pd.Series(EMP2)],axis=0,ignore_index=True)
             workingData2['PPP_'+GSM]=pd.concat([pd.Series(PPP),pd.Series(PPP2)],axis=0,ignore_index=True)
             workingData2['TCA_'+GSM]=pd.concat([pd.Series(TCA),pd.Series(TCA2)],axis=0,ignore_index=True)

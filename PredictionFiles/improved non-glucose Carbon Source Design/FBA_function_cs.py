@@ -622,8 +622,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         OE_fail=0
         defaultModel, defaultObj, defaultFluxSol = defaultObjFunction(GSM)
     #####################
-        EMP,PPP,TCA,NADPH,ATP,PrdtFlux,PrdtYield,bio,O2uptake,Glcuptake = {},{},{},{},{},{},{},{},{},{}
-        EMP2,PPP2,TCA2,NADPH2,ATP2,PrdtFlux2,PrdtYield2,bio2,O2uptake2,Glcuptake2 = {},{},{},{},{},{},{},{},{},{}
+        EMP,PPP,TCA,NADPH,ATP,PrdtFlux,PrdtYield,bio,O2uptake,Glcuptake,Mod = {},{},{},{},{},{},{},{},{},{},{}
+        EMP2,PPP2,TCA2,NADPH2,ATP2,PrdtFlux2,PrdtYield2,bio2,O2uptake2,Glcuptake2,Mod2= {},{},{},{},{},{},{},{},{},{},{}
         print(defaultObj,GSM)
 
 
@@ -751,11 +751,12 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             if Product_option == 1:
                 finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(forPrdtModel,dataPointFBASol.objective_value,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv)
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint], PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
-                print(PrdtFlux[dataPoint])
+
+
             else:
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint],PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
             PrdtYield[dataPoint] = PrdtFlux[dataPoint]*MW
-
+            Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
             
             #Are there knock-outs to screen?
             tempOptKnock=[]
@@ -763,7 +764,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             additionalKnocks=0
             if (optKnockRxns.empty==False):
                 for optKnockDataPoint in range(0,len(optKnockRxns)):
-                    print(optKnockDataPoint,optKnockRxns.loc[optKnockDataPoint].rxns_deleted_updated_)
+
                     if Product_option == 1:
                         optKO = optKnockRxns.loc[optKnockDataPoint].rxns_deleted_updated_.strip().split(',')
                         # forPrdtModel2 = forPrdtModel.copy()
@@ -803,17 +804,21 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                     if Product_option == 1:
                         finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(optKnockModel2,defaultPrdtModelBioObj,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv)
                         EMP2[optKnockDataPoint], PPP2[optKnockDataPoint], TCA2[optKnockDataPoint], NADPH2[optKnockDataPoint], ATP2[optKnockDataPoint], PrdtFlux2[optKnockDataPoint],bio2[optKnockDataPoint],O2uptake2[optKnockDataPoint],Glcuptake2[optKnockDataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
-                        print(PrdtFlux2[optKnockDataPoint])
+
                     else:
                         EMP2[optKnockDataPoint], PPP2[optKnockDataPoint], TCA2[optKnockDataPoint], NADPH2[optKnockDataPoint], ATP2[optKnockDataPoint], PrdtFlux2[optKnockDataPoint],bio2[optKnockDataPoint],O2uptake2[optKnockDataPoint],Glcuptake2[optKnockDataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
+                    
                     PrdtYield2[optKnockDataPoint] = PrdtFlux2[optKnockDataPoint]*MW
-                    print(PrdtYield2[optKnockDataPoint],PrdtFlux2[optKnockDataPoint])
+                    Mod2[optKnockDataPoint]=' '.join(optKO)
+
+
                 temp1 = FBATrainData.loc[dataPoint,'number_genes_deleted']
                 temp1+=additionalKnocks
                 FBATrainData.loc[dataPoint,'number_genes_deleted']=temp1
                 temp2 = FBATrainData.loc[dataPoint].number_genes_mod+additionalKnocks
                 FBATrainData.loc[dataPoint,'number_genes_mod']=temp2
-
+                
+                workingData2['geneMod'] = pd.concat([pd.Series(Mod),pd.Series(Mod2)],axis=0,ignore_index=True)
                 workingData2['EMP_'+GSM]=pd.concat([pd.Series(EMP),pd.Series(EMP2)],axis=0,ignore_index=True)
                 workingData2['PPP_'+GSM]=pd.concat([pd.Series(PPP),pd.Series(PPP2)],axis=0,ignore_index=True)
                 workingData2['TCA_'+GSM]=pd.concat([pd.Series(TCA),pd.Series(TCA2)],axis=0,ignore_index=True)
