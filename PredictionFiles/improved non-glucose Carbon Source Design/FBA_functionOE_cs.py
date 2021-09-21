@@ -160,7 +160,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
             #Check if the generic name is the externally provided dictionary
             # print('try',GPR_dict[gene],geneDict[gene][GSM])
             if ((GPR_dict[gene]) and (geneDict[gene][GSM]==1)):
-                print(GPR_dict[gene],gene,'returning')
                 return(GPR_dict[gene])
             else:               
 

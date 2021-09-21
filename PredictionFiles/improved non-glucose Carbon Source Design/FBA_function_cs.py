@@ -24,35 +24,43 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
     #OVEREXPRESSION and PRODUCT OPTIONS
     epsilon = [0.05,10,1,0.75,0.02,0.5] #percent to increase/decrease gene expression. new bounds if flux is all 0. bounds if flux is 0, but upper/lowerbound is not 0, biomass percent change
 
-    ####################################################################################################
-    #######################################      USED FXNS      ########################################
-    ###########################################################################################
-    #Create common-name to Genome-Scale-Model (GSM) gene name & is gene in GSM dictionary.
+
     def createGeneDict():
+        '''
+        Creates common-name (AAT1) to Genome-Scale-Model (GSM) locus gene name (YALI01446g)
+        & dict of central carbon metabolites names to GSM metabolite nemes
+        
+        returns: 
+            dict1:
+                geneDict
+            dict2:
+                FBA metabolite dict
+        '''
+            
+        # historical dict to deal with database instances when gene names were not locus
+        # info can be found 'Supplemental Excel File 2- DataCharateristics & Encoding.xlsx'
+        # https://doi.org/10.1016/j.ymben.2021.07.003 
         productInfo = pd.ExcelFile('Supplemental Excel File 2- DataCharateristics & Encoding.xlsx').parse('Encoding')
 
         df = pd.DataFrame()
         df['bname'] = productInfo.bname
         df['traditionalName'] = productInfo.traditionalName
         df['iYLI647'] = productInfo.in_iYLI647
-    #     df['iMK735'] = productInfo.in_iMK735
-    #     df['iYali4'] = productInfo.in_iYali4
-        # df['iNL895'] = productInfo.in_iNL895
-    #     df['iYL_2.0'] = productInfo['in_iYL_2.0']
 
+        # transpose so gene names are column names
         df = df.T
         df = df.rename(columns=df.loc['traditionalName'])
         df = df.drop('traditionalName')#,axis=0)
+        
+         # file to call later in code
         geneDict = df.to_dict()
 
-
+        # translates precursors names into FBA acceptable GSM. Other GSM dicts exist
+        # info can be found 'Supplemental Excel File 2- DataCharateristics & Encoding.xlsx'
+        # https://doi.org/10.1016/j.ymben.2021.07.003
         df2 = pd.DataFrame()
         df2['CCM'] = productInfo['Central Carbon']
-    #     df2['iYL_2.0'] = productInfo['iYL_2metabolites']
         df2['iYLI647'] = productInfo['iYLI647metabolites']
-        # df2['iNL895'] = productInfo['iNL895metabolites']
-    #     df2['iMK735'] = productInfo['iMK735metabolites']
-    #     df2['iYali4'] = productInfo['iYali4metabolites']
 
         df2 = df2.T
         df2.rename(columns=df2.loc['CCM'],inplace=True)
@@ -64,11 +72,35 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
 
     #Generate Gene-product-assocated dictionary for used Genome-Scale-Model
     def generateOEGeneGPR(GSM,model):
+        '''
+        !!! LEGACY FUNCTION!!!
+
+        Generate a dictionary that has the gene-product association for the 
+        non-canonical gene names (AAT1 - product)
+        
+        Args
+            input:
+                GSM (list):
+                    name of the GSM to be used (i.e., iYLI647) 
+                model (cobra.model object):
+                    model to obtain the relationships from
+            output:
+                dict1:
+                    dictionary of gene-product-reaction associations
+        '''
+        
+        # initialize     
         GPR_dict=defaultdict(list)
+        
+        # reference the names in the non-canonical names in the gene dict
         for x in geneDict.keys():
+        
+            # if the gene is found in the GSM (previous work)
             if geneDict[x][GSM]==1:
                 tempGene = model.genes.get_by_id(geneDict[x]['bname'])
                 rxn_list=[]
+                
+                # get reaction info
                 for reaction in tempGene.reactions:
                     temp_dict={}
                     temp_dict['mets']=[x.id for x in reaction.metabolites]
@@ -85,28 +117,44 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         return(GPR_dict)
 
         #Simulate default Genome-scale-model flux with biomass as objective function
+    
     def defaultObjFunction(dGSM):
+        '''
+        Loads ann simulates default GSM flux solution (biomass as objective function, glucose
+        as input carbon source
+        
+        Args:
+            inputs:
+                dGSM (string):
+                    name of the GSM to be used (without the '.mat' extension)
+            outputs:
+                model (cobra.model object)
+                    cobra model
+                objective_value (float32):
+                    fba objective solution
+                defaultFlux (pd.DataFrame):
+                    flux solution values
+                    
+        '''
+        
+        # biomass is the default objective
         defaultObj = 'biomass_C'
 
+        # load the model (matlab)
         model = cobra.io.load_matlab_model(dGSM+'_corr.mat')
         model.objective = model.reactions.get_by_id(defaultObj)
             
-        
-        defaultFlux = model.optimize()
-        
-        
-        
-        
+        # optimize the model
+        defaultFlux = model.optimize() 
         
         return(model, defaultFlux.objective_value,defaultFlux)
 
-        #Perform Genetic Knockout for model simulation
 
     def search(list, g):
         """
         Search genome scale model for engineered gene of interest.
 
-        Parameters
+        Args:
         ----------
         list: list
             List of all genes in the genome-scale-model.
@@ -127,26 +175,31 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
     def searchGeneDict(gene,GSM,GPR_dict,gene_list):
         """
         Extract the gene-reaction rules from the selected genome-scale-model for each particular gene.
+        This function works if there is no externally provided GSM
+       
         Parameters
         ----------
         gene: list
-        The engineered gene name entered as either cobra model gene name or as a generic name provided in the gene_dict (see createGeneDict function).
+            The engineered gene name entered as either cobra model gene name or as a generic name provided in the gene_dict (see createGeneDict function).
         GSM: list
-        Genome-scale model name
+            Genome-scale model name
         GPR_dict: .dict
-        Gene-protein-reaction dictionary, see generateOEGeneGPR
+            Gene-protein-reaction dictionary, see generateOEGeneGPR
         gene_list: list
-        List of all genes in the genome-scale-model.
+            List of all genes in the genome-scale-model.
+        
         Returns
         -------
         Gene associated reactions or FALSE if engineered gene of interest is not in the GSM.
         """
         try:
+           
             #Check if there is externally provided generic name-genome scale gene name dict
             #Check if the generic name is the externally provided dictionary
             if (GPR_dict[gene] and geneDict[gene][GSM]==1):
                 return(GPR_dict[gene])
         except Exception as e:
+           
             # search for the engineered gene of interest is within the genome-scale model.
             # temp1 = True or False (if gene in model)
             # temp2 = gene in the gene_ist
@@ -156,7 +209,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             else:
                 return(False)
 
-    #Implement gene OVEREXPRESSION for each overexpressed native gene
     def performGeneKOs(modelKO,GSM,genesKO,geneMO):
         """
         Performs GSM model knock-outs.
@@ -176,8 +228,13 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         -------
         Modifed GSM with the corresponding genetic knock-outs.
         """
+        
+        # list of gene ids that are in the model (modelKO is the model name)
         gene_list=[z.id for z in modelKO.genes]
+        
         for i,KO in enumerate(genesKO):
+            
+            # try knocking out the gene using generic names
             try:
                 if (KO==1 and geneDict[geneMO[i]][GSM]==1) | (KO=='1' and geneDict[geneMO[i]][GSM]==1):
                     try:
@@ -186,8 +243,9 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                         print(repr(e),geneMO[i],GSM)
 
             except Exception as e:
+                
+                # search for the gene in the model locus names
                 temp1,temp2 = search(gene_list,geneMO[i])
-
 
                 if (KO==1 and temp1==True) | (KO==1 and temp1==True):
                     try:
@@ -196,11 +254,12 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                         print(repr(e),geneMO[i],GSM)
                 else:
                     print(geneMO[i],'not in GSM, no KO modification performed')
+            
         return(modelKO)
 
     def performGeneOE(tempOEModel,GSM,genesOE,genesMO,hetGenes,tempKOSol,GPR_dict,ep0,OE_f,ep1,ep2,ep5,f1a,f2a,f3a,f4a,f5a,f6a):
         """
-        Performs GSM model OE.
+        Implement gene OVEREXPRESSION for each overexpressed native gene
 
         Parameters
         ----------
@@ -261,8 +320,11 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             Count of number of times model fails to overexpress a reaction that had a prior flux solution with a 0, and fluxes were reset to original bounds (i.e, no resulting modifications).
 
         """
+        
+        # list of genes in the model (modelKO is the model name)
         gene_list=[z.id for z in modelKO.genes]
 
+        # iterate through the genes
         for i,OE in enumerate(genesOE):
 
             GPR_dict_list=None
@@ -276,14 +338,18 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                 print(GPR_dict[genesMO[i]])
                 print(geneDict[genesMO[i]],'i')
                 '''
+                
+                # if there is a generic name for the gene, find its reactions
                 if ((GPR_dict[genesMO[i]]) and (geneDict[genesMO[i]][GSM]==1)):
                     GPR_dict_list = GPR_dict[genesMO[i]]
                     
             except Exception as e:
+                
+                # try to obtain the locus name
                 if(OE=='1' and GPR_dict_list==None) | (OE==1 and GPR_dict_list==None):
                     GPR_dict_list = searchGeneDict(genesMO[i],GSM,GPR_dict,gene_list)# print(i,genesMO,OE)
 
-
+            # if there is a reaction associated with the gene
             if (GPR_dict_list!=None):
                 for rxn in GPR_dict_list:
                     lower = tempOEModel.reactions.get_by_id(rxn['id']).lower_bound
@@ -394,8 +460,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         return(tempOEModel,OE_f,f1a,f2a,f3a,f4a,f5a,f6a)
 
 
-    #Product flux
-    def maximizeProduct(model,defaultBioObj,ep3,ep4,fbaModelMetaboliteDict,dataPoint,counterProductFailTemp,gsm,prod_f,isRbflvOption):
+    def maximizeProduct(model,defaultBioObj,ep3,ep4,fbaModelMetaboliteDict,dataPoint,counterProductFailTemp,gsm,prod_f):
 
         """
         Adds the pseudo-reaction simulating product flux to the GSM, sets the biomass to a set value, and optimizes for the pseudo-reaction.
@@ -437,7 +502,6 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         modelP.reactions.get_by_id('biomass_C').lower_bound = (defaultBioObj*(ep3))
 
 
-        #FBATrainData global?
         # stoichNADPH=(FBATrainData.nadh_nadph_cost.loc[dataPoint])
         # stoichATP=(FBATrainData.atp_cost.loc[dataPoint])
         stoichNADPH=round(FBATrainData.nadh_nadph_cost.loc[dataPoint])
@@ -460,28 +524,23 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         modelP.add_reactions([reaction__product])
 
         #adds energy and cofactors (NADPH only)
-        if isRbflvOption==0:
-            reaction__product.add_metabolites({
-            prdt_m: 1.0,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ATP'][gsm].strip('\'"')).id: -stoichATP,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADPH'][gsm].strip('\'"')).id: -stoichNADPH,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADP'][gsm].strip('\'"')).id : stoichNADPH,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ADP'][gsm].strip('\'"')).id : stoichATP
-            })
-        else:
-            reaction__product.add_metabolites({
-            prdt_m: 1.0,
-            #
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ATP'][gsm].strip('\'"')).id: -stoichATP,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADPH'][gsm].strip('\'"')).id: -stoichNADPH,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADP'][gsm].strip('\'"')).id : stoichNADPH,
-            #modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ADP'][gsm].strip('\'"')).id : stoichATP
+ 
+        reaction__product.add_metabolites({
+        prdt_m: 1.0,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ATP'][gsm].strip('\'"')).id: -stoichATP,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADPH'][gsm].strip('\'"')).id: -stoichNADPH,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADP'][gsm].strip('\'"')).id : stoichNADPH,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ADP'][gsm].strip('\'"')).id : stoichATP
                 
-            })
+        })
+        
+        # find the stoichiometry of the precursors
         if isinstance(FBATrainData.loc[dataPoint].precursor_required,str):
             stoichprecursor=FBATrainData.loc[dataPoint].precursor_required.strip().split(';')
         else:
             stoichprecursor[0]=FBATrainData.loc[dataPoint].precursor_required
+        
+        # obtain the precursor metabolite name in the GSM
         for i,j in enumerate(prec):
             met = fbaModelMetaboliteDict[j][gsm].strip('\'"')
             reaction__product.add_metabolites({modelP.metabolites.get_by_id(met).id: -round(float(stoichprecursor[i]))})
@@ -494,9 +553,9 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         modelP.objective = 'Prdt_r'
         # modelP.objective = 'DM_prdt_m'
 
-
         finalProductFluxSolnTemp = modelP.optimize()
 
+        # if the model is not optimal, decrease the biomass constrains
         c=1
         while finalProductFluxSolnTemp.status!='optimal':
             #print('Infeasible',c)
@@ -519,6 +578,25 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
 
 
     def FBAFeatureExtraction(featureModelSoln,GSM):
+        '''
+        Extracts the FBA features from the model solution
+        
+        
+        Parameters
+        ----------
+        featureModelSoln: pd.DataFrame()
+            optimized flux vector (cobra solution)
+        GSM: string
+            model name to use in the dict
+        
+        Returns  
+        ----------
+        floats:
+            flux solution values for individual reactions
+        
+      
+        '''
+        
         if (GSM=='iYLI647'):
             bio2 = featureModelSoln.fluxes['biomass_C']
             EMP2 = featureModelSoln.fluxes['GAPD']/2 # FBA,PFK
@@ -546,6 +624,17 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         return(EMP2,PPP2,TCA2,NADPH2,ATP2,PrdtFlux2,bio2,O2,Glc)
 
     def carbonSourceCorrect(defaultModel,carbonSource):
+            '''
+            sets the model carbon source to the experimental condition
+            
+            Parameters
+            ----------
+            defaultModel: cobra.model
+            carbonSource (int)
+            
+
+            '''
+    
             if (carbonSource==1):
                 defaultModel.reactions.get_by_id('EX_glc(e)').bounds = (-10,-10)
             elif (carbonSource==2 or carbonSource=='2a'):
@@ -600,30 +689,26 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             return(defaultModel)
         
 
-    ####################################################################################################
-    ####################################################################################################
-    ####################################################################################################
 
+    # initialize output dataframe 
     workingData2 = pd.DataFrame()
-    # workingData2
+
     #Import product info containing the class of each product along with the in or out of model information
     geneDict,fbaModelMetaboliteDict = createGeneDict()
     output=pd.DataFrame()
 
-
-
-
-    # FBA_models=['iNL895']
-    #FBATrainData
     ############################### FBA loop start ###################################################
     counterProductFail=0
     for GSM in FBA_models:
         prod_fail = 0
         OE_fail=0
         defaultModel, defaultObj, defaultFluxSol = defaultObjFunction(GSM)
-    #####################
+        
+        # initialize temporary holders of results
         EMP,PPP,TCA,NADPH,ATP,PrdtFlux,PrdtYield,bio,O2uptake,Glcuptake,Mod = {},{},{},{},{},{},{},{},{},{},{}
         EMP2,PPP2,TCA2,NADPH2,ATP2,PrdtFlux2,PrdtYield2,bio2,O2uptake2,Glcuptake2,Mod2= {},{},{},{},{},{},{},{},{},{},{}
+        
+        # output default objective
         print(defaultObj,GSM)
 
 
@@ -641,27 +726,27 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
         fail5 = 0
         fail6 = 0
 
-    #####################altenrative for modeling######################################
         for dataPoint in FBATrainData.index:
             
             carbonSource = FBATrainData.loc[dataPoint].cs1
             counter+=1
             
+            # get the experimental carbon source
             defaultModel = carbonSourceCorrect(defaultModel,FBATrainData.loc[dataPoint].cs1)
      
-
+            # set the carbon source to experimental values
             defaultModel.objective = 'biomass_C'
             defaultFluxSol = defaultModel.optimize()
             defaultObj = defaultFluxSol.objective_value            
                                                               
             modelKO = defaultModel.copy()
 
-    ############### Determine if KO, GE instances, perform model simulation ############################
-
+            # obtain product molecular weight
             MW = FBATrainData.loc[dataPoint].mw/1000
 
             #Are there gene Knock-outs?
-            if (FBATrainData.loc[dataPoint].number_genes_deleted!=0 and KO_option==1):
+            if ((FBATrainData.loc[dataPoint].number_genes_deleted!=0) and (KO_option==1)):
+                
                 #get gene KO data
                 tempGenesModified = FBATrainData.genes_modified_updated[dataPoint].strip().split(';')
                 tempKO = FBATrainData.gene_deletion[dataPoint].strip().split(';')
@@ -743,13 +828,10 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                 dataPointFBASol = noGeneticMOSol = defaultFluxSol
                 forPrdtModel = defaultModel.copy()
 
-            if FBATrainData.loc[dataPoint].product_name == 'Riboflavin':
-                isRbflv=1
-            else:
-                isRbflv=0
+
 
             if Product_option == 1:
-                finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(forPrdtModel,dataPointFBASol.objective_value,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv)
+                finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(forPrdtModel,dataPointFBASol.objective_value,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail)
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint], PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
 
 
@@ -759,6 +841,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
             Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
             
             #Are there knock-outs to screen?
+            
             tempOptKnock=[]
             optKnockModel = forPrdtModel.copy()
             additionalKnocks=0
@@ -802,7 +885,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,FBA_models):
                         # forPrdtModel = modelKO.copy()
 
                     if Product_option == 1:
-                        finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(optKnockModel2,defaultPrdtModelBioObj,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv)
+                        finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(optKnockModel2,defaultPrdtModelBioObj,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail)
                         EMP2[optKnockDataPoint], PPP2[optKnockDataPoint], TCA2[optKnockDataPoint], NADPH2[optKnockDataPoint], ATP2[optKnockDataPoint], PrdtFlux2[optKnockDataPoint],bio2[optKnockDataPoint],O2uptake2[optKnockDataPoint],Glcuptake2[optKnockDataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
 
                     else:
