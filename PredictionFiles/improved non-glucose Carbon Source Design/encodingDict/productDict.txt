@@ -1,0 +1,58 @@
+Product	product_superclass2	prdt_class
+1-butanol	Fatty acid-derived	6
+1-decanol	Fatty acid-derived	6
+Acetate	Organic acid	1
+a-Farnesene	Small terpene	3
+a-Ionone	Large terpene	4
+AKG	Organic acid	1
+a-Linolenic acid	Lipid	2
+Alkanes	Fatty acid-derived	6
+Amorphadiene	Large terpene	4
+Arachidonic acid	Lipid	2
+Arbutin	Glycan	8
+a-Santalene	Small terpene	3
+Astaxanthin	Large terpene	4
+b-Carotene	Large terpene	4
+Betulin	Large terpene	4
+Betulinic acid	Large terpene	4
+b-Ionone	Large terpene	4
+Campersterol	Large terpene	4
+Canthaxanthin	Large terpene	4
+Citrate	Organic acid	1
+Crotonic acid	Organic acid	1
+Decanoic Acid	Lipid	2
+Echinenone	Large terpene	4
+Eriodictyol	Flavonoid	5
+Erythritol	Alcohol	7
+FAEE	Fatty acid-derived	6
+Fatty Alcohol	Fatty acid-derived	6
+FFA	Lipid	2
+Fumarate	Organic acid	1
+Glycogen	Glycan	8
+Hexadecanol	Fatty acid-derived	6
+Isocitrate	Organic acid	1
+LCDCA	Fatty acid-derived	6
+Limonene	Small terpene	3
+Linalool	Small terpene	3
+Lipids	Lipid	2
+Lupeol	Large terpene	4
+Lycopene	Large terpene	4
+Malate	Organic acid	1
+Mannitol	Alcohol	7
+Methyl-ketones	Fatty acid-derived	6
+Mevalonate	Organic acid	1
+Naringenin	Flavonoid	5
+Nootkatone	Small terpene	3
+Octadecanol	Fatty acid-derived	6
+Pentane	Fatty acid-derived	6
+PHB	Lipid	2
+Pregnenolone	Large terpene	4
+Protopanaxadiol	Large terpene	4
+Pyruvate	Organic acid	1
+Reservatrol	Flavonoid	5
+Riboflavin	Flavonoid	5
+Squalene	Large terpene	4
+Succinate	Organic acid	1
+Taxifolin	Flavonoid	5
+Triacetic acid lactone	Polyketide	9
+Valencene	Small terpene	3

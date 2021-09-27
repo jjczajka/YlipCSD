@@ -1,4 +1,5 @@
-def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
+def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models,KOorOE=None):
+
 
     import cobra
     from cobra.flux_analysis import single_gene_deletion, single_reaction_deletion, double_gene_deletion,double_reaction_deletion
@@ -11,6 +12,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
     import os
 
     ####USER DEFINED OPTIONS.
+    error=[]
+    
     #Do you want to perform GENETIC KNOCKOUTS?
     KO_option = 1
 
@@ -29,33 +32,47 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
 
     #Create common-name to Genome-Scale-Model (GSM) gene name & is gene in GSM dictionary.
     def createGeneDict():
-        productInfo = pd.ExcelFile('Supplemental Excel File 2- DataCharateristics & Encoding.xlsx').parse('Encoding')
+        '''
+        Legacy function
+        
+        creates a dictionary relating the generic gene names (e.g., AAT1)
+        to locus names (e.g YALI04550g)
+        
+        creates a dictionary for the metabolite names (precursors) to the genome scale model 
+        metabolites
+        
+        Returns
+        ----------
+        
+        dict1: geneDict
+        dict2: fbaMetaboliteDict
+        '''
+  
+        # historical dict to deal with database instances when gene names were not locus
+        # info can be found 'Supplemental Excel File 2- DataCharateristics & Encoding.xlsx'
+        # https://doi.org/10.1016/j.ymben.2021.07.003 
+        # read the list 
+        df = pd.read_csv('encodingDict/geneDict.txt',delimiter='\t')
 
-        df = pd.DataFrame()
-        df['bname'] = productInfo.bname
-        df['traditionalName'] = productInfo.traditionalName
-        df['iYLI647'] = productInfo.in_iYLI647
-    #     df['iMK735'] = productInfo.in_iMK735
-    #     df['iYali4'] = productInfo.in_iYali4
-        # df['iNL895'] = productInfo.in_iNL895
-    #     df['iYL_2.0'] = productInfo['in_iYL_2.0']
-
+        # transpose so gene names are column names
         df = df.T
         df = df.rename(columns=df.loc['traditionalName'])
-        df = df.drop('traditionalName')#,axis=0)
+        df = df.rename(index={'in_iYLI647':'iYLI647'})
+        df = df.drop('traditionalName')#,axis=0)}
         geneDict = df.to_dict()
 
-
-        df2 = pd.DataFrame()
-        df2['CCM'] = productInfo['Central Carbon']
-    #     df2['iYL_2.0'] = productInfo['iYL_2metabolites']
-        df2['iYLI647'] = productInfo['iYLI647metabolites']
-        # df2['iNL895'] = productInfo['iNL895metabolites']
-    #     df2['iMK735'] = productInfo['iMK735metabolites']
-    #     df2['iYali4'] = productInfo['iYali4metabolites']
-
+        # translates precursors names into FBA acceptable GSM. Other GSM dicts exist
+        # info can be found 'Supplemental Excel File 2- DataCharateristics & Encoding.xlsx'
+        # https://doi.org/10.1016/j.ymben.2021.07.003
+        df2 = pd.read_csv('encodingDict/fbaMetaboliteDict.txt',delimiter='\t')
+        
+        # drop unnecessary portions
+        df2.drop(['iMK735metabolites','iYali4metabolites','iNL895metabolites','iYL_2metabolites'],axis=1,inplace=True)
+        
+        # transpose to row column
         df2 = df2.T
         df2.rename(columns=df2.loc['CCM'],inplace=True)
+        df2 = df2.rename(index={'iYLI647metabolites':'iYLI647'})
         df2.drop('CCM',inplace=True)
 
         fbaModelMetaboliteDict = df2.to_dict()
@@ -64,6 +81,12 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
 
     #Generate Gene-product-assocated dictionary for used Genome-Scale-Model
     def generateOEGeneGPR(GSM,model):
+        '''
+        Legacy function
+        
+        Creates a GPR_dict that 
+        '''
+    
         GPR_dict=defaultdict(list)
         for x in geneDict.keys():
             if geneDict[x][GSM]==1:
@@ -100,7 +123,28 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                         GPR_dict[tempGene.id]=rxn_list                
 
         return(GPR_dict)
+    
+    #Generate Gene-product-assocated dictionary for used Genome-Scale-Model
+    def generateKOGeneGPR(GSM,model):
+        GPR_dict=defaultdict(list)
+        for x in geneDict.keys():
+            if geneDict[x][GSM]==1:
+                tempGene = model.genes.get_by_id(geneDict[x]['bname'])
+                rxn_list=[]
+                for reaction in tempGene.reactions:
+                    temp_dict={}
+                    temp_dict['mets']=[x.id for x in reaction.metabolites]
+                    temp_dict['mets_coefs']=[x for x in reaction.get_coefficients(reaction.metabolites)]
+                    temp_dict['lower_bound']=reaction.lower_bound
+                    temp_dict['upper_bound']=reaction.upper_bound
+                    temp_dict['id']=reaction.id
+                    temp_dict['name']=reaction.name
+                    temp_dict['subsystem']=reaction.subsystem
+                    temp_dict['gpr']=reaction.gene_reaction_rule
+                    rxn_list.append(temp_dict)
+                GPR_dict[x]=rxn_list
 
+        return(GPR_dict)
         #Simulate default Genome-scale-model flux with biomass as objective function
     def defaultObjFunction(dGSM):
         defaultObj = 'biomass_C'
@@ -182,7 +226,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                 return(False)
 
     #Implement gene OVEREXPRESSION for each overexpressed native gene
-    def performGeneKOs(modelKO,GSM,genesKO,geneMO):
+    def performGeneKOs(modelKO,GSM,genesKO,geneMO,error):
         """
         Performs GSM model knock-outs.
 
@@ -200,14 +244,17 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
         Returns
         -------
         Modifed GSM with the corresponding genetic knock-outs.
+        
+        error:
+            message about any errors
         """
         gene_list=[z.id for z in modelKO.genes]
-# modelKO,GSM,genesKO,geneMO=optKnockModel,GSM,tempKO2,tempOptKnock
+
         for i,KO in enumerate(genesKO):
             # print(i,KO)
             try:
                 # print('enter')
-                if (KO==1 and geneDict[geneMO[i]][GSM]==1) | (KO=='1' and geneDict[geneMO[i]][GSM]==1):
+                if ((KO==1 and geneDict[geneMO[i]][GSM]==1) | (KO=='1' and geneDict[geneMO[i]][GSM]==1)):
                     # print('here')
                     #print((geneDict[geneMO[i]]['bname']))#,dict[geneMO[i]])
                     try:
@@ -223,7 +270,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                 # temp1
                 # KO
 
-                if (KO==1 and temp1==True) | (KO==1 and temp1==True):
+                if ((KO==1 and temp1==True) | (KO=='1' and temp1==True)):
                     # print('if')
                     try:
                         cobra.manipulation.delete_model_genes(modelKO,(pd.Series(temp2)))
@@ -233,9 +280,11 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                     # print('yes')
                 else:
                     print(geneMO[i],'not in GSM, no KO modification performed')
-        return(modelKO)
+                    errors = geneMO[i]
+                    error.append(errors)
+        return(modelKO,error)
 
-    def performGeneOE(tempOEModel,GSM,genesOE,genesMO,hetGenes,tempKOSol,GPR_dict,ep0,OE_f,ep1,ep2,ep5,f1a,f2a,f3a,f4a,f5a,f6a):
+    def performGeneOE(tempOEModel,GSM,genesOE,genesMO,hetGenes,tempKOSol,GPR_dict,ep0,OE_f,ep1,ep2,ep5,f1a,f2a,f3a,f4a,f5a,f6a,error):
         """
         Performs GSM model OE.
 
@@ -276,7 +325,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
             Count of number of times model fails to overexpress a reaction that had a prior flux solution that was positive.
         f6a: int
             Count of number of times model fails to overexpress a reaction that had a prior flux solution with a 0, and fluxes were reset to original bounds (i.e, no resulting modifications).
-
+        error:
+            message about the simulation errors
 
         Returns
         -------
@@ -296,7 +346,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
             Count of number of times model fails to overexpress a reaction that had a prior flux solution that was positive.
         f6a: int
             Count of number of times model fails to overexpress a reaction that had a prior flux solution with a 0, and fluxes were reset to original bounds (i.e, no resulting modifications).
-
+        error:
+            message about the simulation errors
         """
         gene_list=[z.id for z in modelKO.genes]
 
@@ -424,15 +475,19 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
 
             else:
                 print('Gene:',genesMO[i],'not in Genome scale model, OE simulation performed without accounting for gene')
+                errors = str(genesMO[i])
+                print(errors)
+                error.append(errors)
+                print(error)
         tempOESol = tempOEModel.optimize()
         #!!!! Does not return KO model... (too slow)
         if tempOESol.status!='optimal':
             OE_f+=1
 
-        return(tempOEModel,OE_f,f1a,f2a,f3a,f4a,f5a,f6a)
+        return(tempOEModel,OE_f,f1a,f2a,f3a,f4a,f5a,f6a,error)
 
     #Product flux
-    def maximizeProduct(model,defaultBioObj,ep3,ep4,fbaModelMetaboliteDict,dataPoint,counterProductFailTemp,gsm,prod_f,isRbflvOption):
+    def maximizeProduct(model,defaultBioObj,ep3,ep4,fbaModelMetaboliteDict,dataPoint,counterProductFailTemp,gsm,prod_f,isRbflvOption=0):
     # model,defaultBioObj,ep3,ep4,fbaModelMetaboliteDict,dataPoint,counterProductFailTemp,gsm,prod_f,isRbflvOption=forPrdtModel,dataPointFBASol.objective_value,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv
 
         """
@@ -497,21 +552,14 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
         modelP.add_reactions([reaction__product])
 
         #adds energy and cofactors (NADPH only)
-        if isRbflvOption==0:
-            reaction__product.add_metabolites({
-            prdt_m: 1.0,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ATP'][gsm].strip('\'"')).id: -stoichATP,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADPH'][gsm].strip('\'"')).id: -stoichNADPH,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADP'][gsm].strip('\'"')).id : stoichNADPH,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ADP'][gsm].strip('\'"')).id : stoichATP
-            })
-        else:
-            reaction__product.add_metabolites({
-            prdt_m: 1.0,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ATP'][gsm].strip('\'"')).id: -stoichATP,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADPH'][gsm].strip('\'"')).id: -stoichNADPH,
-            modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADP'][gsm].strip('\'"')).id : stoichNADPH
-            })
+        reaction__product.add_metabolites({
+        prdt_m: 1.0,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ATP'][gsm].strip('\'"')).id: -stoichATP,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADPH'][gsm].strip('\'"')).id: -stoichNADPH,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['NADP'][gsm].strip('\'"')).id : stoichNADPH,
+        modelP.metabolites.get_by_id(fbaModelMetaboliteDict['ADP'][gsm].strip('\'"')).id : stoichATP
+        })
+
         if isinstance(FBATrainData.loc[dataPoint].precursor_required,str):
             stoichprecursor=FBATrainData.loc[dataPoint].precursor_required.strip().split(';')
         else:
@@ -688,22 +736,22 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
             defaultModel.objective = 'biomass_C'
             defaultFluxSol = defaultModel.optimize()
             defaultObj = defaultFluxSol.objective_value            
-                                                              
+            MW = FBATrainData.loc[dataPoint].mw/1000
             modelKO = defaultModel.copy()
     ############### Determine if KO, GE instances, perform model simulation ############################
 
 
             #Are there gene Knock-outs?
             if (FBATrainData.loc[dataPoint].number_genes_deleted!=0 and KO_option==1):
+
                 #get gene KO data
                 tempGenesModified = FBATrainData.genes_modified_updated[dataPoint].strip().split(';')
                 tempKO = FBATrainData.gene_deletion[dataPoint].strip().split(';')
 
                 #perform model KO
-                modelKO = performGeneKOs(modelKO,GSM,tempKO,tempGenesModified)
+                modelKO,error = performGeneKOs(modelKO,GSM,tempKO,tempGenesModified,error)
                 tempKOSol = modelKO.optimize()
-                MW = FBATrainData.loc[dataPoint].mw/1000
-                
+
                 #Did the model produce an infeasible solution? Yes-revert to default soln
                 if tempKOSol.status!='optimal':
                     print('geneKO growth failed')
@@ -721,7 +769,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                     tempHetGenes = FBATrainData.loc[dataPoint].heterologous_gene.strip().split(';')
 
                     #perform model overexpression
-                    modelKO,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(modelKO,GSM,tempGenesOE,tempGenesModified,tempHetGenes,tempKOSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
+                    modelKO,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6,error = performGeneOE(modelKO,GSM,tempGenesOE,tempGenesModified,tempHetGenes,tempKOSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6,error)
 
                     #perform OE FBA analysis with Biomass as objective
                     tempOESol = modelKO.optimize()
@@ -755,7 +803,8 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                 tempHetGenes = FBATrainData.loc[dataPoint].heterologous_gene.strip().split(';')
 
 
-                modelOE,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(modelKO,GSM,tempGenesOE,tempGenesModified,tempHetGenes,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
+
+                modelOE,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6,error = performGeneOE(modelKO,GSM,tempGenesOE,tempGenesModified,tempHetGenes,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6,error)
                 tempOESol = modelOE.optimize()
 
                 #Did the model produce an infeasible solution? Yes-revert to default soln
@@ -776,126 +825,251 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
                 dataPointFBASol = noGeneticMOSol = defaultFluxSol
                 forPrdtModel = defaultModel.copy()
 
-            if FBATrainData.loc[dataPoint].product_name == 'Riboflavin':
-                isRbflv=1
-            else:
-                isRbflv=0
-
+            
             if Product_option == 1:
-                finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(forPrdtModel,dataPointFBASol.objective_value,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv)
+                finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(forPrdtModel,dataPointFBASol.objective_value,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail)
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint], PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
+
+
             else:
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint],PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
-            PrdtYield[dataPoint] = PrdtFlux[dataPoint]*FBATrainData.loc[dataPoint].mw/1000
+            
+            PrdtYield[dataPoint] = PrdtFlux[dataPoint]*MW
             Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
-            #
+            
+            #Are there knock-outs to screen?
+            if KOorOE=='KO':
+                tempOptKnock=[]
+                optKnockModel = forPrdtModel.copy()
+                additionalKnocks=0
+                if (optKnockRxns.empty==False):
+                    for optKnockDataPoint in range(0,len(optKnockRxns)):
 
-            optOEModel = forPrdtModel.copy()
-            additionalOE=0
-            for optOEDataPoint in range(0,len(optOERxns)):
-
-                #print(optOEDataPoint,optKnockRxns.loc[optOEDataPoint].rxns_deleted_updated_)
-                optOE = optOERxns.loc[optOEDataPoint].rxns_deleted_updated_.strip().split(',')
-                tempOEGenes=[]
-                tempOE2=[]
-                tempOptOE=[]
-
-                
-                for junk in optOE:
-
-                    try:
-                        # junk
-                        t = (optOEModel.reactions.get_by_id(junk).gene_reaction_rule)
-                        t2 = t.replace("(", "").replace(")", "").replace(" ", "").split('or')
-                        t2=[ot.split('and', 1)[0] for ot in t2]
-                        tempOptOE = tempOptOE + t2
-                        # t2
-                        # tempOptKnock
+                        if Product_option == 1:
+                            optKO = optKnockRxns.loc[optKnockDataPoint].rxns_deleted_updated_.strip().split(',')
+                            # forPrdtModel2 = forPrdtModel.copy()
+                            tempOptKnock=[]
+                            tempKO2=[]
                         
-                        tempOE2 = [1 for i in range(len(tempOptOE))]
-                        tempHetGenes2 = [0 for i in range(len(tempOptOE))]
-                        additionalOE = len(tempOptOE)
+                            #for each reaction, grab the associated gene to knock-out.
+                            for junk in optKO:
+                                try:
+                                    t = (optKnockModel.reactions.get_by_id(junk).gene_reaction_rule)
+                                    t2 = t.replace("(", "").replace(")", "").replace(" ", "").split('or')
+                                    t2=[ot.split('and', 1)[0] for ot in t2]
+                                    tempOptKnock = tempOptKnock + t2
+                                    tempKO2 = [1 for i in range(len(tempOptKnock))]
+                                    additionalKnocks = len(tempOptKnock)
+                                except Exception as e:
+                                    t = junk
+                                    tempKO2 = t2 = t.replace("(", "").replace(")", "").replace(" ", "").split('or')
+                                    t2=[ot.split('and', 1)[0] for ot in t2]
+                                    tempOptKnock = tempOptKnock + t2
+                                    tempKO2 = [1 for i in range(len(tempOptKnock))]
+                                    additionalKnocks = len(tempOptKnock)
+                        optKnockModel2 = optKnockModel.copy()
+                        optKnockModel2,error = performGeneKOs(optKnockModel2,GSM,tempKO2,tempOptKnock,error)
+                        tempOptKnockSol = optKnockModel2.optimize()
 
-                    except Exception as e:
-                        t = junk
-                        tempOE2 = t2 = t.replace("(", "").replace(")", "").replace(" ", "").split('or')
-                        t2=[ot.split('and', 1)[0] for ot in t2]
-                        tempOptOE = tempOptOE + t2
-                        tempOE = [1 for i in range(len(tempOptOE))]
-                        tempHetGenes2 = [0 for i in range(len(tempOptOE))]                        
-                        additionalOE = len(tempOptOE)
-                        # print(tempOptOE)
-                        # print(additionalKnocks)
-                
+                        # currently uses the infeasible flux values
+                        if tempOptKnockSol.status!='optimal':
+                            print('gtempOptKnockSol growth failed')
+                            sim_grw_flag=0
+                            defaultPrdtModelBioObj = tempOptKnockSol.objective_value
+                            optKnockModel2 = forPrdtModel.copy()
+                        else:
+                            defaultPrdtModelBioObj = tempOptKnockSol.objective_value
+                            # forPrdtModel = modelKO.copy()
 
-                optOEModel2 = optOEModel.copy()
-                #optOEModel2 = performGeneKOs(optOEModel2,GSM,tempOE2,tempOptOE)
-                tempOptOESol = optOEModel.optimize()
+                        if Product_option == 1:
+                            finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(optKnockModel2,defaultPrdtModelBioObj,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail)
+                            EMP2[optKnockDataPoint], PPP2[optKnockDataPoint], TCA2[optKnockDataPoint], NADPH2[optKnockDataPoint], ATP2[optKnockDataPoint], PrdtFlux2[optKnockDataPoint],bio2[optKnockDataPoint],O2uptake2[optKnockDataPoint],Glcuptake2[optKnockDataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
 
-                optOEModel2,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(optOEModel2,GSM,tempOE2,tempOptOE,tempHetGenes2,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
-                tempOESol = optOEModel2.optimize()
-                #print(optOEModel2.reactions.GND.bounds,optOEModel2.reactions.GAPD.bounds,optOEModel2.reactions.CSm.bounds)
-                #print(tempOESol.fluxes['GND'],tempOESol.fluxes['GAPD'],tempOESol.fluxes['CSm'])
-                if tempOESol.status!='optimal':
-                    print('gtempOptKnockSol growth failed')
-                    sim_grw_flag=0
-                    defaultPrdtModelBioObj = tempOESol.objective_value
-                    optKnockModel = forPrdtModel.copy()
-                else:
-                    defaultPrdtModelBioObj = tempOptOESol.objective_value
-                    # forPrdtModel = modelKO.copy()
-
-
-                if Product_option == 1:
-                    finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(optOEModel2,defaultPrdtModelBioObj,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail,isRbflv)
-# finalProdFluxSoln
-                    EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint],Glcuptake2[optOEDataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
+                        else:
+                            EMP2[optKnockDataPoint], PPP2[optKnockDataPoint], TCA2[optKnockDataPoint], NADPH2[optKnockDataPoint], ATP2[optKnockDataPoint], PrdtFlux2[optKnockDataPoint],bio2[optKnockDataPoint],O2uptake2[optKnockDataPoint],Glcuptake2[optKnockDataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
                     
-                else:
-                    EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint],Glcuptake2[optOEDataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
-                
-                PrdtYield2[optOEDataPoint] = PrdtFlux2[optOEDataPoint]*FBATrainData.loc[dataPoint].mw/1000
-                Mod2[optOEDataPoint]=' '.join(optOE)
-                
-                
-# PrdtFlux2
-                if (optOEDataPoint%3)==0:
-                    print('Completed ', optOEDataPoint+1, ' overexpression simulations')
-# PrdtYield2
-            temp1 = FBATrainData.loc[dataPoint,'number_genes_deleted']
-            temp1+=additionalOE
-            FBATrainData.loc[dataPoint,'number_genes_deleted']=temp1
-            temp2 = FBATrainData.loc[dataPoint].number_genes_mod+additionalOE
-            FBATrainData.loc[dataPoint,'number_genes_mod']=temp2
-            # print(FBATrainData.loc[dataPoint].number_genes_mod)
-            # pd.Series(EMP2)
+                        PrdtYield2[optKnockDataPoint] = PrdtFlux2[optKnockDataPoint]*MW
+                        Mod2[optKnockDataPoint]=' '.join(optKO)
 
-            workingData2['geneMod'] = pd.concat([pd.Series(Mod),pd.Series(Mod2)],axis=0,ignore_index=True)
-            workingData2['EMP_'+GSM]=pd.concat([pd.Series(EMP),pd.Series(EMP2)],axis=0,ignore_index=True)
-            workingData2['PPP_'+GSM]=pd.concat([pd.Series(PPP),pd.Series(PPP2)],axis=0,ignore_index=True)
-            workingData2['TCA_'+GSM]=pd.concat([pd.Series(TCA),pd.Series(TCA2)],axis=0,ignore_index=True)
-            workingData2['NADPH_'+GSM]=pd.concat([pd.Series(NADPH),pd.Series(NADPH2)],axis=0,ignore_index=True)
-            workingData2['ATP_'+GSM]=pd.concat([pd.Series(ATP),pd.Series(ATP2)],axis=0,ignore_index=True)
-            # workingData2['NADH_'+GSM]=pd.concat([pd.Series(NADH),pd.Series(NADH2)],axis=0,ignore_index=True)
-            workingData2['PrdtFlux_'+GSM]=pd.concat([pd.Series(PrdtFlux),pd.Series(PrdtFlux2)],axis=0,ignore_index=True)
-            workingData2['PrdtYield_'+GSM]=pd.concat([pd.Series(PrdtYield),pd.Series(PrdtYield2)],axis=0,ignore_index=True)
-            workingData2['Biomass_'+GSM]=pd.concat([pd.Series(bio),pd.Series(bio2)],axis=0,ignore_index=True)
-            workingData2['O2Uptake_'+GSM]=pd.concat([pd.Series(O2uptake),pd.Series(O2uptake2)],axis=0,ignore_index=True)
-            workingData2['GlcUptake_'+GSM]=pd.concat([pd.Series(Glcuptake),pd.Series(Glcuptake2)],axis=0,ignore_index=True)
+
+                    temp1 = FBATrainData.loc[dataPoint,'number_genes_deleted']
+                    temp1+=additionalKnocks
+                    FBATrainData.loc[dataPoint,'number_genes_deleted']=temp1
+                    temp2 = FBATrainData.loc[dataPoint].number_genes_mod+additionalKnocks
+                    FBATrainData.loc[dataPoint,'number_genes_mod']=temp2
+                
+                    workingData2['geneMod'] = pd.concat([pd.Series(Mod),pd.Series(Mod2)],axis=0,ignore_index=True)
+                    workingData2['EMP_'+GSM]=pd.concat([pd.Series(EMP),pd.Series(EMP2)],axis=0,ignore_index=True)
+                    workingData2['PPP_'+GSM]=pd.concat([pd.Series(PPP),pd.Series(PPP2)],axis=0,ignore_index=True)
+                    workingData2['TCA_'+GSM]=pd.concat([pd.Series(TCA),pd.Series(TCA2)],axis=0,ignore_index=True)
+                    workingData2['NADPH_'+GSM]=pd.concat([pd.Series(NADPH),pd.Series(NADPH2)],axis=0,ignore_index=True)
+                    workingData2['ATP_'+GSM]=pd.concat([pd.Series(ATP),pd.Series(ATP2)],axis=0,ignore_index=True)
+                    # workingData2['NADH_'+GSM]=pd.concat([pd.Series(NADH),pd.Series(NADH2)],axis=0,ignore_index=True)
+                    workingData2['PrdtFlux_'+GSM]=pd.concat([pd.Series(PrdtFlux),pd.Series(PrdtFlux2)],axis=0,ignore_index=True)
+                    workingData2['PrdtYield_'+GSM]=pd.concat([pd.Series(PrdtYield),pd.Series(PrdtYield2)],axis=0,ignore_index=True)
+                    workingData2['Biomass_'+GSM]=pd.concat([pd.Series(bio),pd.Series(bio2)],axis=0,ignore_index=True)
+                    workingData2['O2Uptake_'+GSM]=pd.concat([pd.Series(O2uptake),pd.Series(O2uptake2)],axis=0,ignore_index=True)
+                    workingData2['GlcUptake_'+GSM]=pd.concat([pd.Series(Glcuptake),pd.Series(Glcuptake2)],axis=0,ignore_index=True)
+
+
+                    test = pd.DataFrame()
+                    test = pd.DataFrame(FBATrainData.loc[dataPoint]).transpose()
+                    test = pd.concat([test]*(len(EMP2)+1), ignore_index=True)
+                    test = pd.concat([test,workingData2],axis=1)
+                    output = pd.concat([output,test],axis=0,ignore_index=True)
+
+                else:
+                    test = pd.DataFrame()
+                    test = pd.DataFrame(FBATrainData.loc[dataPoint]).transpose()
+
+                    test['EMP_'+GSM]=pd.Series(EMP)
+                    test['PPP_'+GSM]=pd.Series(PPP)
+                    test['TCA_'+GSM]=pd.Series(TCA)
+                    test['NADPH_'+GSM]=pd.Series(NADPH)
+                    test['ATP_'+GSM]=pd.Series(ATP)
+                    # test['NADH_'+GSM]=pd.Series(NADH)
+                    test['PrdtFlux_'+GSM]=pd.Series(PrdtFlux)
+                    test['PrdtYield_'+GSM]=pd.Series(PrdtYield)
+                    test['Biomass_'+GSM]=pd.Series(bio)
+                    test['O2Uptake_'+GSM]=pd.Series(O2uptake)
+                    test['GlcUptake_'+GSM]=pd.Series(Glcuptake)
+                    # print(workingData2)
+
+                    output = pd.concat([output,test],axis=0,ignore_index=True)
+                    # output = test.copy()
+        
+        
+            elif KOorOE=='OE':
+                
+                optOEModel = forPrdtModel.copy()
+                additionalOE=0
+                for optOEDataPoint in range(0,len(optOERxns)):
+
+                    #print(optOEDataPoint,optKnockRxns.loc[optOEDataPoint].rxns_deleted_updated_)
+                    optOE = optOERxns.loc[optOEDataPoint].rxns_deleted_updated_.strip().split(',')
+                    tempOEGenes=[]
+                    tempOE2=[]
+                    tempOptOE=[]
+
+                
+                    for junk in optOE:
+
+                        try:
+                            # junk
+                            t = (optOEModel.reactions.get_by_id(junk).gene_reaction_rule)
+                            t2 = t.replace("(", "").replace(")", "").replace(" ", "").split('or')
+                            t2=[ot.split('and', 1)[0] for ot in t2]
+                            tempOptOE = tempOptOE + t2
+                            # t2
+                            # tempOptKnock
+                        
+                            tempOE2 = [1 for i in range(len(tempOptOE))]
+                            tempHetGenes2 = [0 for i in range(len(tempOptOE))]
+                            additionalOE = len(tempOptOE)
+
+                        except Exception as e:
+                            t = junk
+                            tempOE2 = t2 = t.replace("(", "").replace(")", "").replace(" ", "").split('or')
+                            t2=[ot.split('and', 1)[0] for ot in t2]
+                            tempOptOE = tempOptOE + t2
+                            tempOE = [1 for i in range(len(tempOptOE))]
+                            tempHetGenes2 = [0 for i in range(len(tempOptOE))]                        
+                            additionalOE = len(tempOptOE)
+                            # print(tempOptOE)
+                            # print(additionalKnocks)
+                
+
+                    optOEModel2 = optOEModel.copy()
+                    tempOptOESol = optOEModel.optimize()
+
+                    optOEModel2,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(optOEModel2,GSM,tempOE2,tempOptOE,tempHetGenes2,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
+                    tempOESol = optOEModel2.optimize()
+
+                    if tempOESol.status!='optimal':
+                        print('gtempOptKnockSol growth failed')
+                        sim_grw_flag=0
+                        defaultPrdtModelBioObj = tempOESol.objective_value
+                        optKnockModel = forPrdtModel.copy()
+                    else:
+                        defaultPrdtModelBioObj = tempOptOESol.objective_value
+                        # forPrdtModel = modelKO.copy()
+
+
+                    if Product_option == 1:
+                        finalProdFluxSoln,counterProductFail,prod_fail = maximizeProduct(optOEModel2,defaultPrdtModelBioObj,epsilon[3],epsilon[4],fbaModelMetaboliteDict,dataPoint,counterProductFail,GSM,prod_fail)
+    
+    # finalProdFluxSoln
+                        EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint],Glcuptake2[optOEDataPoint] = FBAFeatureExtraction(finalProdFluxSoln,GSM)
+                    
+                    else:
+                        EMP2[optOEDataPoint], PPP2[optOEDataPoint], TCA2[optOEDataPoint], NADPH2[optOEDataPoint], ATP2[optOEDataPoint], PrdtFlux2[optOEDataPoint],bio2[optOEDataPoint],O2uptake2[optOEDataPoint],Glcuptake2[optOEDataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
+                
+                    PrdtYield2[optOEDataPoint] = PrdtFlux2[optOEDataPoint]*FBATrainData.loc[dataPoint].mw/1000
+                    Mod2[optOEDataPoint]=' '.join(optOE)
+                
+                
+    # PrdtFlux2
+                    if (optOEDataPoint%3)==0:
+                        print('Completed ', optOEDataPoint+1, ' overexpression simulations')
+    # PrdtYield2
+                temp1 = FBATrainData.loc[dataPoint,'number_genes_deleted']
+                temp1+=additionalOE
+                FBATrainData.loc[dataPoint,'number_genes_deleted']=temp1
+                temp2 = FBATrainData.loc[dataPoint].number_genes_mod+additionalOE
+                FBATrainData.loc[dataPoint,'number_genes_mod']=temp2
+                # print(FBATrainData.loc[dataPoint].number_genes_mod)
+                # pd.Series(EMP2)
+
+                workingData2['geneMod'] = pd.concat([pd.Series(Mod),pd.Series(Mod2)],axis=0,ignore_index=True)
+                workingData2['EMP_'+GSM]=pd.concat([pd.Series(EMP),pd.Series(EMP2)],axis=0,ignore_index=True)
+                workingData2['PPP_'+GSM]=pd.concat([pd.Series(PPP),pd.Series(PPP2)],axis=0,ignore_index=True)
+                workingData2['TCA_'+GSM]=pd.concat([pd.Series(TCA),pd.Series(TCA2)],axis=0,ignore_index=True)
+                workingData2['NADPH_'+GSM]=pd.concat([pd.Series(NADPH),pd.Series(NADPH2)],axis=0,ignore_index=True)
+                workingData2['ATP_'+GSM]=pd.concat([pd.Series(ATP),pd.Series(ATP2)],axis=0,ignore_index=True)
+                # workingData2['NADH_'+GSM]=pd.concat([pd.Series(NADH),pd.Series(NADH2)],axis=0,ignore_index=True)
+                workingData2['PrdtFlux_'+GSM]=pd.concat([pd.Series(PrdtFlux),pd.Series(PrdtFlux2)],axis=0,ignore_index=True)
+                workingData2['PrdtYield_'+GSM]=pd.concat([pd.Series(PrdtYield),pd.Series(PrdtYield2)],axis=0,ignore_index=True)
+                workingData2['Biomass_'+GSM]=pd.concat([pd.Series(bio),pd.Series(bio2)],axis=0,ignore_index=True)
+                workingData2['O2Uptake_'+GSM]=pd.concat([pd.Series(O2uptake),pd.Series(O2uptake2)],axis=0,ignore_index=True)
+                workingData2['GlcUptake_'+GSM]=pd.concat([pd.Series(Glcuptake),pd.Series(Glcuptake2)],axis=0,ignore_index=True)
+
+                test = pd.DataFrame()
+                test = pd.DataFrame(FBATrainData.loc[dataPoint]).transpose()
+                test = pd.concat([test]*(len(EMP2)+1), ignore_index=True)
+                test = pd.concat([test,workingData2],axis=1)
+                output = pd.concat([output,test],axis=0,ignore_index=True)
+        
+            
+            
+        
+        if (counter%50)==0:
+            print(counter)
+
+        if not (KOorOE):
+#           print('entered')
+            workingData2['geneMod'] = pd.Series(Mod)
+            workingData2['EMP_'+GSM]= pd.Series(EMP)
+            workingData2['PPP_'+GSM]= pd.Series(PPP)
+            workingData2['TCA_'+GSM]= pd.Series(TCA)
+            workingData2['NADPH_'+GSM]= pd.Series(NADPH)
+            workingData2['ATP_'+GSM]= pd.Series(ATP)
+            workingData2['PrdtFlux_'+GSM]= pd.Series(PrdtFlux)
+            workingData2['PrdtYield_'+GSM]= pd.Series(PrdtYield)
+            workingData2['Biomass_'+GSM]= pd.Series(bio)
+            workingData2['O2Uptake_'+GSM]= pd.Series(O2uptake)
+            workingData2['GlcUptake_'+GSM]= pd.Series(Glcuptake)
+
 
             test = pd.DataFrame()
             test = pd.DataFrame(FBATrainData.loc[dataPoint]).transpose()
-            test = pd.concat([test]*(len(EMP2)+1), ignore_index=True)
+            
+            # CSD strain design
+            # test = pd.concat([test]*(len(EMP2)+1), ignore_index=True)
             test = pd.concat([test,workingData2],axis=1)
             output = pd.concat([output,test],axis=0,ignore_index=True)
+#           print(output)
 
-# workingData2
-# output
-            if (counter%50)==0:
-                print(counter)
-
-# output
     print(OE_fail,'OE failures')
     print(prod_fail,'Prod failures')
     print(fail1,fail2,fail3,fail4,fail5,fail6,'failure cases 1-6')
-    return(output)
+    return(output,error)
