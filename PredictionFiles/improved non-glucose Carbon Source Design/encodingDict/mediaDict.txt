@@ -1,0 +1,4 @@
+media	media_class
+rich	3
+intermediate	2
+minimal	1

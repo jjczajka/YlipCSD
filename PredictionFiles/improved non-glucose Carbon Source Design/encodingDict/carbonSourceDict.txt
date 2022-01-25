@@ -1,0 +1,30 @@
+num	carbon	carbonSource	carbonSourceMW
+1	glucose	1	180.156
+2	glycerol	2	92.09382
+2a	crude glycerol	2a	92.09382
+3	citrate	3	192.124
+4	acetate	4	59.044
+5	pyruvate	5	88.06
+6	ethanol	6	46.07
+7	xylose	7	150.13
+8	fructose	8	180.156
+9	sucrose	9	342.3
+10	Vegetable oil	10	1382.2
+12	arbinose	12	150.13
+13	maltose	13	342.3
+15	mannose	15	180.156
+16	galactose	16	180.156
+17	malate	17	134.0874
+18	mevalonate	18	148.16
+19	itaconic acid	19	130.099
+20	Inulin	20	6179
+21	ribose	21	150.13
+25	oleic acid	25	282.47
+26	ricinoleic acid	26	298.461
+30	glutamate	30	147.13
+40	proponic acid	40	74.08
+41	butryic acid	41	88.11
+42	acetic:proionic:butyric acid (5:2:3)	42	70.771
+43	Sorbitol	22	182.17
+44	Arabinose	23	150.13
+45	Lactose	24	342.3
