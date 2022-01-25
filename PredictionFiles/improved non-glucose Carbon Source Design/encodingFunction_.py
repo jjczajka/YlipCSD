@@ -110,7 +110,7 @@ def encodeTransform(workingData):
     averageTherm={}
 
     for dataPoint in workingData.index:
-
+        print(dataPoint)
 
         stoichNADPH=(workingData.nadh_nadph_cost.loc[dataPoint])
         stoichATP=(workingData.atp_cost.loc[dataPoint])
@@ -153,8 +153,11 @@ def encodeTransform(workingData):
 
         # withCoA
         totalTherm[dataPoint] = round(ATP_nadph_tempThermo + workingData.loc[dataPoint]['product_deltaGo']-thermoTemp+stoichCoA*-3202.2)
-        
-        averageTherm[dataPoint]=round(totalTherm[dataPoint]/(workingData.loc[dataPoint]['Pathway_enzymatic_steps']))
+        try:
+            averageTherm[dataPoint]=round(totalTherm[dataPoint]/(workingData.loc[dataPoint]['Pathway_enzymatic_steps']))
+        except:
+            averageTherm[dataPoint]=0
+
 
 
 

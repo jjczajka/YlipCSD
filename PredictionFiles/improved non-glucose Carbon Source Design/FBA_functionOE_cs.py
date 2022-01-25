@@ -788,7 +788,11 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models):
             else:
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint],PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
             PrdtYield[dataPoint] = PrdtFlux[dataPoint]*FBATrainData.loc[dataPoint].mw/1000
-            Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
+            try:
+                Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
+            except:
+                Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint]
+
             #
 
             optOEModel = forPrdtModel.copy()
