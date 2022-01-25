@@ -835,8 +835,10 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models,KOorOE=
                 EMP[dataPoint], PPP[dataPoint], TCA[dataPoint], NADPH[dataPoint], ATP[dataPoint],PrdtFlux[dataPoint],bio[dataPoint],O2uptake[dataPoint],Glcuptake[dataPoint] = FBAFeatureExtraction(dataPointFBASol,GSM)
             
             PrdtYield[dataPoint] = PrdtFlux[dataPoint]*MW
-            Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
-            
+            try:
+                Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint].strip()
+            except:
+                Mod[dataPoint]=FBATrainData.genes_modified_updated[dataPoint]
             #Are there knock-outs to screen?
             if KOorOE=='KO':
                 tempOptKnock=[]
@@ -982,7 +984,7 @@ def FBA_FeatureExtraction(FBATrainData,optKnockRxns,optOERxns,FBA_models,KOorOE=
                     optOEModel2 = optOEModel.copy()
                     tempOptOESol = optOEModel.optimize()
 
-                    optOEModel2,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6 = performGeneOE(optOEModel2,GSM,tempOE2,tempOptOE,tempHetGenes2,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6)
+                    optOEModel2,OE_fail,fail1,fail2,fail3,fail4,fail5,fail6,error = performGeneOE(optOEModel2,GSM,tempOE2,tempOptOE,tempHetGenes2,defaultFluxSol,GPR_dict,epsilon[0],OE_fail,epsilon[1],epsilon[2],epsilon[5],fail1,fail2,fail3,fail4,fail5,fail6,error)
                     tempOESol = optOEModel2.optimize()
 
                     if tempOESol.status!='optimal':
