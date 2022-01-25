@@ -110,7 +110,6 @@ def encodeTransform(workingData):
     averageTherm={}
 
     for dataPoint in workingData.index:
-        print(dataPoint)
 
         stoichNADPH=(workingData.nadh_nadph_cost.loc[dataPoint])
         stoichATP=(workingData.atp_cost.loc[dataPoint])
